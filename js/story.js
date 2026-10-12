@@ -44,34 +44,28 @@ const style = document.createElement("style");
 style.textContent = ".wmask{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.1em;margin-bottom:-.1em}.wmask>.w{display:inline-block}";
 document.head.appendChild(style);
 
-/* ---------------- preloader ---------------- */
-function preload() {
-  const urls = [...$$("img")].map(i => i.src);
-  urls.push("https://images.unsplash.com/photo-1559556064-4161b6be179b?w=2000&q=75&auto=format");
-  let done = 0; const counter = { v: 0 };
-  const tick = () => {
-    gsap.to(counter, { v: Math.round(++done / urls.length * 100), duration: .4, onUpdate: () => {
-      $("#pct").textContent = Math.round(counter.v); $("#bar").style.width = counter.v + "%";
-    }});
-  };
-  const loads = urls.map(u => new Promise(r => { const im = new Image(); im.onload = im.onerror = () => { tick(); r(); }; im.src = u; }));
-  const timeout = new Promise(r => setTimeout(r, 6000));
-  return Promise.race([Promise.all([...loads, document.fonts.ready, new Promise(r => setTimeout(r, 1200))]), timeout]);
+/* ---------------- deferred images ----------------
+   Everything except the hero photo waits until the loader is gone,
+   so the first screen gets the whole bandwidth. */
+function loadDeferredImages() {
+  $$("img[data-src]").forEach(img => { img.decoding = "async"; img.src = img.dataset.src; img.removeAttribute("data-src"); });
 }
 
 const heroWords = splitWords($("#heroTitle"));
 gsap.set(heroWords, { yPercent: 110 });
 gsap.set(".hero-fade", { opacity: 0, y: 20 });
 
-preload().then(() => {
-  $("#pct").textContent = "100"; $("#bar").style.width = "100%";
+window.__loader.then(() => {
   const tl = gsap.timeline({ onComplete: () => { document.body.classList.remove("loading"); lenis && lenis.start(); ScrollTrigger.refresh(); } });
-  tl.to("#loader .mark", { opacity: 0, y: -20, duration: .5 }, .2)
-    .to("#loader", { yPercent: -100, duration: 1.1, ease: "power4.inOut" }, .4)
-    .from("#heroMedia", { scale: 1.25, duration: 2.2, ease: "power3.out" }, .5)
-    .to(heroWords, { yPercent: 0, duration: 1.2, stagger: .07, ease: "power4.out" }, .9)
-    .to(".hero-fade", { opacity: 1, y: 0, duration: 1, stagger: .12, ease: "power3.out" }, 1.3)
-    .set("#loader", { display: "none" });
+  tl.to(".ld-steam", { opacity: 0, duration: .3 }, 0)
+    .to(".ld-center", { y: -40, opacity: 0, duration: .7, ease: "power3.in" }, .1)
+    .to(".ld-foot", { opacity: 0, duration: .4 }, .1)
+    .to("#loader", { clipPath: "inset(0% 0% 100% 0%)", duration: 1.1, ease: "power4.inOut" }, .35)
+    .from("#heroMedia", { scale: 1.25, duration: 2.2, ease: "power3.out" }, .45)
+    .to(heroWords, { yPercent: 0, duration: 1.2, stagger: .07, ease: "power4.out" }, .85)
+    .to(".hero-fade", { opacity: 1, y: 0, duration: 1, stagger: .12, ease: "power3.out" }, 1.25)
+    .set("#loader", { display: "none" })
+    .call(loadDeferredImages, null, .6);
 });
 
 /* ---------------- header + hero parallax ---------------- */

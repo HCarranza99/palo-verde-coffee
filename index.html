@@ -5,9 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Palo Verde Coffee — From our trees to your cup</title>
 <meta name="description" content="Direct-trade specialty coffee, roasted to order and shipped from our farm to your door.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://images.unsplash.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,0..100,0..1;1,9..144,300..700,0..100,0..1&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<!-- the hero photo is the only image the loader waits for: fetch it first -->
+<link rel="preload" as="image" fetchpriority="high" imagesrcset="https://images.unsplash.com/photo-1559556064-4161b6be179b?auto=format&fit=crop&w=800&q=40 800w, https://images.unsplash.com/photo-1559556064-4161b6be179b?auto=format&fit=crop&w=1200&q=40 1200w, https://images.unsplash.com/photo-1559556064-4161b6be179b?auto=format&fit=crop&w=1600&q=34 1600w" imagesizes="(orientation: portrait) 170vw, 100vw">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..600;1,9..144,400..500&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="loading">
@@ -15,13 +20,31 @@
 <div class="grain"></div>
 
 <!-- ============ PRELOADER ============ -->
-<div id="loader">
-  <div class="mark">
-    <svg class="bean" viewBox="0 0 60 60"><ellipse cx="30" cy="30" rx="20" ry="27" fill="#C65A2E" transform="rotate(30 30 30)"/><path d="M22 10 Q38 30 38 50" stroke="#1E1410" stroke-width="3.5" fill="none" stroke-linecap="round" transform="rotate(30 30 30)"/></svg>
-    <div class="brand">Palo Verde</div>
+<div id="loader" aria-label="Loading">
+  <div class="ld-center">
+    <svg class="ld-cup" viewBox="0 0 140 130" aria-hidden="true">
+      <defs><clipPath id="cupClip"><path d="M24 44 H96 V78 Q96 108 60 108 Q24 108 24 78Z"/></clipPath></defs>
+      <g class="ld-steam"><path d="M46 34 q-7 -8 0 -16 q7 -8 0 -16"/><path d="M60 34 q-7 -8 0 -16 q7 -8 0 -16"/><path d="M74 34 q-7 -8 0 -16 q7 -8 0 -16"/></g>
+      <g clip-path="url(#cupClip)">
+        <g id="ldLiquid" transform="translate(0 66)">
+          <path class="ld-wave" d="M0 42 q15 -6 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 V140 H0Z" fill="#6B3F22"/>
+          <path class="ld-wave ld-wave2" d="M0 46 q15 -5 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 V140 H0Z" fill="#4A2A16"/>
+        </g>
+      </g>
+      <path d="M24 44 H96 V78 Q96 108 60 108 Q24 108 24 78Z" fill="none" stroke="#F3EBDD" stroke-width="3.5" stroke-linejoin="round"/>
+      <path d="M96 54 h8 q14 0 14 14 q0 14 -14 14 h-10" fill="none" stroke="#F3EBDD" stroke-width="3.5"/>
+      <path d="M12 116 H108" stroke="#F3EBDD" stroke-width="3.5" stroke-linecap="round" opacity=".5"/>
+    </svg>
+    <div class="ld-brand">Palo Verde<em>From our trees to your cup</em></div>
   </div>
-  <div class="pct" id="pct">0</div>
-  <div class="bar" id="bar"></div>
+  <div class="ld-foot">
+    <div class="ld-route">
+      <ol id="ldNodes"><li class="on">Farm</li><li>Roast</li><li>Bag</li><li>Flight</li><li>Your door</li></ol>
+      <div class="track"><i class="fill" id="ldFill"></i><i class="dot" id="ldDot"></i></div>
+      <div class="ld-msg" id="ldMsg">Picking the ripest cherries…</div>
+    </div>
+    <div class="ld-pct"><span id="ldPct">0</span><small>%</small></div>
+  </div>
 </div>
 
 <!-- ============ HEADER ============ -->
@@ -40,7 +63,10 @@
 
 <!-- ============ HERO ============ -->
 <section class="hero" id="top">
-  <div class="hero-media" id="heroMedia"></div>
+  <div class="hero-media" id="heroMedia">
+    <div class="hero-lqip" style="background-image:url('https://images.unsplash.com/photo-1559556064-4161b6be179b?auto=format&fit=crop&w=48&q=30')"></div>
+    <img id="heroImg" srcset="https://images.unsplash.com/photo-1559556064-4161b6be179b?auto=format&fit=crop&w=800&q=40 800w, https://images.unsplash.com/photo-1559556064-4161b6be179b?auto=format&fit=crop&w=1200&q=40 1200w, https://images.unsplash.com/photo-1559556064-4161b6be179b?auto=format&fit=crop&w=1600&q=34 1600w" sizes="(orientation: portrait) 170vw, 100vw" src="https://images.unsplash.com/photo-1559556064-4161b6be179b?auto=format&fit=crop&w=1200&q=40" fetchpriority="high" decoding="async" alt="">
+  </div>
   <div class="hero-inner">
     <div class="eyebrow hero-fade" style="color:var(--gold);margin-bottom:22px">Direct-trade · Single origin · Roasted to order</div>
     <h1 id="heroTitle">From our trees<br>to <em>your cup.</em></h1>
@@ -184,11 +210,11 @@
 
   <div class="frame">
     <div class="count"><b id="shotNum">01</b> / 05</div>
-    <figure class="shot"><img src="https://images.unsplash.com/photo-1670758611084-e216510c5433?w=800&q=75&auto=format" alt=""><figcaption>Ripe cherries, hand-picked</figcaption></figure>
-    <figure class="shot"><img src="https://images.unsplash.com/photo-1511537190424-bbbab87ac5eb?w=800&q=75&auto=format" alt=""><figcaption>The 15 kg drum roaster</figcaption></figure>
-    <figure class="shot"><img src="https://images.unsplash.com/photo-1562051036-e0eea191d42f?w=800&q=75&auto=format" alt=""><figcaption>Roast-dated, valve-sealed</figcaption></figure>
-    <figure class="shot"><img src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=75&auto=format" alt=""><figcaption>Farm → US hub, direct</figcaption></figure>
-    <figure class="shot"><img src="https://images.unsplash.com/photo-1541167760496-1628856ab772?w=800&q=75&auto=format" alt=""><figcaption>Your first cup at home</figcaption></figure>
+    <figure class="shot"><img data-src="https://images.unsplash.com/photo-1670758611084-e216510c5433?w=700&q=65&auto=format" alt=""><figcaption>Ripe cherries, hand-picked</figcaption></figure>
+    <figure class="shot"><img data-src="https://images.unsplash.com/photo-1511537190424-bbbab87ac5eb?w=700&q=65&auto=format" alt=""><figcaption>The 15 kg drum roaster</figcaption></figure>
+    <figure class="shot"><img data-src="https://images.unsplash.com/photo-1562051036-e0eea191d42f?w=700&q=65&auto=format" alt=""><figcaption>Roast-dated, valve-sealed</figcaption></figure>
+    <figure class="shot"><img data-src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=700&q=65&auto=format" alt=""><figcaption>Farm → US hub, direct</figcaption></figure>
+    <figure class="shot"><img data-src="https://images.unsplash.com/photo-1541167760496-1628856ab772?w=700&q=65&auto=format" alt=""><figcaption>Your first cup at home</figcaption></figure>
   </div>
 
   <div class="minimap" id="minimap">
@@ -252,8 +278,8 @@
   <div>
     <p class="big" id="statement">Most coffee changes hands six times before it reaches you. Ours changes hands once: from the people who grow it, to you. Fresher beans, fairer pay, and a cup you can trace back to a single hillside.</p>
     <div class="intro-photos">
-      <figure><img data-speed="-12" src="https://images.unsplash.com/photo-1642613630414-1d9938f4fe02?w=1100&q=75&auto=format" alt="Hands picking ripe coffee cherries into a basket"></figure>
-      <figure><img data-speed="12" src="https://images.unsplash.com/photo-1586095516671-d085ff58cdd4?w=900&q=75&auto=format" alt="Red and green coffee cherries on the branch"></figure>
+      <figure><img data-speed="-12" data-src="https://images.unsplash.com/photo-1642613630414-1d9938f4fe02?w=900&q=65&auto=format" alt="Hands picking ripe coffee cherries into a basket"></figure>
+      <figure><img data-speed="12" data-src="https://images.unsplash.com/photo-1586095516671-d085ff58cdd4?w=900&q=65&auto=format" alt="Red and green coffee cherries on the branch"></figure>
     </div>
   </div>
 </section>
@@ -278,12 +304,49 @@
   </aside>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
-<script src="js/world.js"></script>
-<script src="js/tito.js"></script>
-<script src="js/story.js"></script>
-<script src="js/shop.js"></script>
+<script>
+/* Loader: runs before the deferred libraries so progress shows right away.
+   It only waits for what the first screen needs (hero photo + fonts + scripts),
+   never for the rest of the page's images. */
+(() => {
+  let seen = false; try { seen = sessionStorage.getItem("pv-seen") === "1"; } catch (e) {}
+  const MIN = seen ? 400 : 1300, t0 = performance.now();
+  const img = document.getElementById("heroImg"), el = id => document.getElementById(id);
+  const msgs = ["Picking the ripest cherries…", "Roasting low and slow…", "Sealing the bag…", "Boarding the plane…", "Almost at your door…"];
+  const nodes = [...document.querySelectorAll("#ldNodes li")];
+  const tasks = { dom: .3, fonts: .25, hero: .45 };
+  let real = 0, shown = 0, lastIdx = -1;
+  const done = k => { real += tasks[k]; tasks[k] = 0; };
+  const heroDone = () => { img.classList.add("ready"); done("hero"); };
+  if (img.complete && img.naturalWidth) heroDone();
+  else { img.addEventListener("load", heroDone, { once: true }); img.addEventListener("error", () => done("hero"), { once: true }); }
+  setTimeout(() => done("hero"), 1600);              // slow network: go on with the blurred placeholder
+  if (document.fonts) document.fonts.ready.then(() => done("fonts")); else done("fonts");
+  setTimeout(() => done("fonts"), 2000);
+  document.addEventListener("DOMContentLoaded", () => done("dom"));
+  window.__loader = new Promise(resolve => {
+    (function frame(now) {
+      const target = Math.min(real, (now - t0) / MIN);
+      shown += (target - shown) * .14;
+      if (target >= .999 && shown > .995) shown = 1;
+      el("ldPct").textContent = Math.round(shown * 100);
+      el("ldFill").style.transform = `scaleX(${shown})`;
+      el("ldDot").style.left = shown * 100 + "%";
+      el("ldLiquid").setAttribute("transform", `translate(0 ${66 - shown * 62})`);
+      const idx = Math.min(4, Math.floor(shown * 5));
+      if (idx !== lastIdx) { lastIdx = idx; el("ldMsg").textContent = msgs[idx]; nodes.forEach((n, i) => n.classList.toggle("on", i <= idx)); }
+      if (shown >= 1) { try { sessionStorage.setItem("pv-seen", "1"); } catch (e) {} resolve(); return; }
+      requestAnimationFrame(frame);
+    })(t0);
+  });
+})();
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+<script defer src="js/world.js"></script>
+<script defer src="js/tito.js"></script>
+<script defer src="js/story.js"></script>
+<script defer src="js/shop.js"></script>
 </body>
 </html>
