@@ -93,6 +93,19 @@
 
   <div id="actor">
     <svg viewBox="0 0 200 300" id="tito" aria-label="Tito, the coffee courier">
+      <defs>
+        <!-- scene light: a multiply tint for the ambient colour plus a warm rim on the left edge (street lamps) -->
+        <filter id="titoLight" x="-20%" y="-10%" width="140%" height="120%" color-interpolation-filters="sRGB">
+          <feFlood id="ambTint" flood-color="#FFFFFF"/>
+          <feComposite in2="SourceGraphic" operator="in"/>
+          <feBlend in2="SourceGraphic" mode="multiply" result="lit"/>
+          <feOffset in="SourceAlpha" dx="2.5" dy="-.5" result="shifted"/>
+          <feComposite in="SourceAlpha" in2="shifted" operator="out" result="edge"/>
+          <feFlood id="rimLight" flood-color="#FFD68A" flood-opacity="0"/>
+          <feComposite in2="edge" operator="in" result="rim"/>
+          <feMerge><feMergeNode in="lit"/><feMergeNode in="rim"/></feMerge>
+        </filter>
+      </defs>
       <!-- paper plane (back half) -->
       <g id="plane" opacity="0">
         <polygon points="-110,214 330,226 20,268" fill="#FFFFFF"/>
@@ -105,20 +118,22 @@
         <g id="sack" opacity="0"><path d="M58 138 Q40 150 42 196 Q44 222 70 222 L80 222 L84 142 Q72 130 58 138Z" fill="#C9A978"/><path d="M50 160 Q62 158 78 164 M48 186 Q62 184 80 190" stroke="#A88A5A" stroke-width="3" fill="none"/></g>
         <!-- back arm -->
         <g id="armL"><rect x="74" y="146" width="17" height="44" rx="8.5" fill="#DCCFBC"/>
-          <g id="foreL"><rect x="76" y="184" width="13" height="36" rx="6.5" fill="#C48A63"/><circle cx="82" cy="222" r="9" fill="#C48A63"/></g></g>
+          <g id="foreL"><rect x="76" y="184" width="13" height="36" rx="6.5" fill="#C48A63"/><path d="M73.5 215 h17 v9 a8.5 8.5 0 0 1 -17 0z" fill="#C48A63"/><ellipse cx="90.5" cy="219" rx="4" ry="5.5" transform="rotate(-30 90.5 219)" fill="#C48A63"/></g></g>
         <!-- back leg -->
-        <g id="legL"><rect x="82" y="212" width="20" height="46" rx="10" fill="#2E2119"/>
+        <g id="legL"><rect x="82" y="212" width="20" height="46" rx="10" fill="#2E2119"/><circle cx="92" cy="254" r="10" fill="#2E2119"/>
           <g id="shinL"><rect x="83" y="250" width="18" height="42" rx="9" fill="#2E2119"/><path d="M80 284 h24 q14 0 14 10 v4 h-38z" fill="#120B07"/></g></g>
         <!-- front leg -->
-        <g id="legR"><rect x="100" y="212" width="20" height="46" rx="10" fill="#3A2A20"/>
+        <g id="legR"><rect x="100" y="212" width="20" height="46" rx="10" fill="#3A2A20"/><circle cx="110" cy="254" r="10" fill="#3A2A20"/>
           <g id="shinR"><rect x="101" y="250" width="18" height="42" rx="9" fill="#3A2A20"/><path d="M98 284 h24 q14 0 14 10 v4 h-38z" fill="#1A110C"/></g></g>
         <!-- torso -->
         <path d="M70 152 Q72 132 100 130 Q128 132 130 152 L134 226 Q100 238 66 226Z" fill="#F2E8D8"/>
         <path d="M118 134 Q130 140 130 152 L134 226 Q124 230 114 232Z" fill="#E3D6C2"/>
-        <path d="M72 178 L128 178 L132 226 Q100 238 68 226Z" fill="#4F6B43"/>
         <path d="M84 178 L84 150 M116 178 L116 150" stroke="#4F6B43" stroke-width="4"/>
-        <rect x="92" y="190" width="18" height="14" rx="3" fill="#425A38"/>
-        <ellipse cx="101" cy="197" rx="3" ry="4.2" fill="#D9A54A" transform="rotate(30 101 197)"/>
+        <g id="apron">
+          <path d="M72 178 L128 178 L132 226 Q100 238 68 226Z" fill="#4F6B43"/>
+          <rect x="92" y="190" width="18" height="14" rx="3" fill="#425A38"/>
+          <ellipse cx="101" cy="197" rx="3" ry="4.2" fill="#D9A54A" transform="rotate(30 101 197)"/>
+        </g>
         <!-- woven picking basket tied at the waist -->
         <g id="basket">
           <clipPath id="bkClip"><path d="M104 202 L158 202 L153 241 Q131 254 109 241Z"/></clipPath>
@@ -138,7 +153,7 @@
           <circle cx="106" cy="204" r="3.2" fill="#5E4128"/>
         </g>
         <!-- carried box -->
-        <g id="box" opacity="0"><rect x="128" y="158" width="60" height="48" rx="4" fill="#C8955A"/><rect x="153" y="158" width="10" height="48" fill="#E8D3AE"/><path d="M128 170 h60" stroke="#B07E46" stroke-width="2"/><text x="134" y="198" font-family="Manrope" font-weight="800" font-size="11" fill="#3A2A20">PV</text></g>
+        <g id="box" opacity="0"><rect x="128" y="158" width="60" height="48" rx="4" fill="#C8955A"/><rect x="153" y="158" width="10" height="48" fill="#E8D3AE"/><path d="M128 170 h60" stroke="#B07E46" stroke-width="2"/><text x="134" y="202" font-family="Manrope" font-weight="800" font-size="11" fill="#3A2A20">PV</text></g>
         <!-- head -->
         <g id="head">
           <rect x="92" y="122" width="18" height="14" fill="#C48A63"/>
@@ -146,23 +161,25 @@
           <path d="M66 92 Q64 120 86 130 Q70 118 72 92Z" fill="#C48A63" opacity=".6"/>
           <ellipse cx="68" cy="102" rx="7" ry="10" fill="#C48A63"/>
           <path d="M62 84 Q66 64 92 70 L70 98Z" fill="#2A1B12"/>
-          <ellipse class="eye" cx="113" cy="98" rx="3.8" ry="5.2" fill="#1E1410"/>
-          <ellipse class="eye" cx="133" cy="98" rx="3.8" ry="5.2" fill="#1E1410"/>
+          <g class="eye"><ellipse cx="113" cy="98" rx="3.8" ry="5.2" fill="#1E1410"/><circle cx="114.4" cy="96" r="1.3" fill="#fff"/></g>
+          <g class="eye"><ellipse cx="133" cy="98" rx="3.8" ry="5.2" fill="#1E1410"/><circle cx="134.4" cy="96" r="1.3" fill="#fff"/></g>
           <path d="M107 87 q6 -4 12 0 M128 87 q6 -4 11 0" stroke="#2A1B12" stroke-width="2.6" fill="none" stroke-linecap="round"/>
           <ellipse cx="110" cy="114" rx="6.5" ry="3.6" fill="#E07E62" opacity=".45"/>
           <ellipse cx="129" cy="110" rx="7.5" ry="6.5" fill="#C98B60"/>
-          <path d="M110 120 q10 -8 20 -1 q10 -7 20 3 q-9 9 -20 2 q-11 7 -20 -4z" fill="#2A1B12"/>
+          <path id="stache" d="M110 120 q10 -8 20 -1 q10 -7 20 3 q-9 9 -20 2 q-11 7 -20 -4z" fill="#2A1B12"/>
           <path d="M118 128 q7 4 13 0" stroke="#7A3B26" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <g id="hat">
           <ellipse cx="100" cy="68" rx="64" ry="13" fill="#E7C27D"/>
           <ellipse cx="100" cy="71" rx="64" ry="10" fill="#D7AE63" opacity=".55"/>
           <path d="M67 68 Q68 28 102 26 Q136 28 137 68Z" fill="#EFCF8E"/>
           <path d="M67 58 Q102 50 137 58 L137 68 Q102 61 67 68Z" fill="#B4452A"/>
           <path d="M84 40 Q100 34 116 38" stroke="#E0BB72" stroke-width="3" fill="none"/>
+          </g>
         </g>
         <!-- front arm -->
         <g id="armR"><rect x="110" y="146" width="17" height="44" rx="8.5" fill="#F2E8D8"/>
           <g id="foreR"><rect x="112" y="184" width="13" height="36" rx="6.5" fill="#D9A27A"/>
-            <circle cx="118" cy="222" r="9" fill="#D9A27A"/></g></g>
+            <path d="M109.5 215 h17 v9 a8.5 8.5 0 0 1 -17 0z" fill="#D9A27A"/><ellipse cx="126.5" cy="219" rx="4" ry="5.5" transform="rotate(-30 126.5 219)" fill="#D9A27A"/></g></g>
       </g>
       <!-- paper plane (front fold) -->
       <g id="planeFront" opacity="0"><polygon points="-60,240 330,226 50,282" fill="#F7F9FA" opacity=".96"/><path d="M-60 240 L330 226" stroke="#C8D3D8" stroke-width="2"/></g>

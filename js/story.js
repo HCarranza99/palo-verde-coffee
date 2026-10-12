@@ -216,6 +216,7 @@ tl.to(P, { walk: 0, duration: .8 }, 61.5)
   .to("#minimap", { opacity: 0, duration: 1 }, 81);
 sky(62, 5, "#8EC1DD", "#DCEBF0", "#FFF1C9");
 sky(70, 8, "#E98A5B", "#F7C98F", "#FFB070");
+tl.to(Tito.light, { warm: 1, duration: 8 }, 70);
 tl.to("#sun", { top: "58%", left: "70%", duration: 14 }, 66).to("#sun", { opacity: 0, duration: 3 }, 80);
 // swap the far scenery while the camera is up in the clouds
 tl.to(["#farHills", "#midHills"], { opacity: 0, duration: 2 }, 70)
@@ -223,6 +224,8 @@ tl.to(["#farHills", "#midHills"], { opacity: 0, duration: 2 }, 70)
 
 /* 05 — LANDING + DOORSTEP */
 sky(79, 6, "#3D3A68", "#D98A72");
+tl.to(Tito.light, { warm: 0, dusk: 1, duration: 6 }, 79)
+  .to(Tito.light, { rim: 1, duration: 2 }, 81);
 tl.to("#dusk", { opacity: .33, duration: 5 }, 79)
   .to(".glow", { opacity: 1, duration: 2, stagger: .3 }, 81)
   .to(".cwin", { opacity: .95, duration: 3 }, 81)

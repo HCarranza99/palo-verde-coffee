@@ -15,12 +15,19 @@ const Tito = (() => {
     head: [$("head"), 100, 132],
   };
   const rigEl = $("rig"), shadow = $("shadow"), svg = $("tito");
+  const hat = $("hat"), apron = $("apron"), stache = $("stache"), tint = $("ambTint"), rim = $("rimLight");
 
   // pose weights, tweened by the story timeline
   const pose = { walk: 1, reach: 0, carry: 0, sit: 0, wave: 0, y: 0 };
+  // scene light, also tweened by the timeline: warm = sunset, dusk = evening, rim = street-lamp edge light
+  const light = { warm: 0, dusk: 0, rim: 0 };
+  const WARM = [251, 222, 196], DUSK = [210, 192, 204];
 
-  let phase = 0, moving = 0, facing = 1;
+  let phase = 0, moving = 0, facing = 1, lastHead = 0, lastBob = 0, lightKey = "";
   const mix = (a, b, t) => a + (b - a) * t;
+  // tiny damped spring for secondary motion (hat, apron)
+  const spring = (s, target, k = .18, damp = .74) => { s.v = (s.v + (target - s.x) * k) * damp; s.x += s.v; return s.x; };
+  const hatRot = { x: 0, v: 0 }, hatY = { x: 0, v: 0 }, apronRot = { x: 0, v: 0 };
   const set = (k, a) => { const [el, x, y] = J[k]; el.setAttribute("transform", `rotate(${a.toFixed(2)} ${x} ${y})`); };
 
   // dp = world units travelled since last frame, t = seconds
@@ -44,15 +51,15 @@ const Tito = (() => {
     const breathe = Math.sin(t * 2.2) * 1.4 * (1 - w);
     let bob = -6 * Math.abs(c) * w + breathe;
 
-    // --- reach up into the bush (with a little picking wiggle)
+    // --- reach up into the bush (with a little picking wiggle), arm kept clear of the face
     const r = pose.reach;
-    armR = mix(armR, -150 + Math.sin(t * 9) * 8, r);
-    foreR = mix(foreR, -28 + Math.sin(t * 9 + 1) * 10, r);
+    armR = mix(armR, -118 + Math.sin(t * 9) * 6, r);
+    foreR = mix(foreR, -50 + Math.sin(t * 9 + 1) * 10, r);
     head = mix(head, -9, r);
 
-    // --- carry the box in front
+    // --- carry the box: front hand flat on its side, back hand gripping the far top edge
     const k = pose.carry;
-    armR = mix(armR, -55, k); armL = mix(armL, -62, k);
+    armR = mix(armR, -35, k); armL = mix(armL, -62, k);
     foreR = mix(foreR, -55, k); foreL = mix(foreL, -50, k);
 
     // --- sit on the paper plane
@@ -63,16 +70,39 @@ const Tito = (() => {
 
     // --- wave hello
     const wv = pose.wave;
-    armR = mix(armR, -160 + Math.sin(t * 11) * 16, wv);
-    foreR = mix(foreR, -22 + Math.sin(t * 11 + .8) * 18, wv);
+    armR = mix(armR, -110 + Math.sin(t * 11) * 6, wv);
+    foreR = mix(foreR, -60 + Math.sin(t * 11 + .8) * 22, wv);
     head = mix(head, 4 + Math.sin(t * 3) * 2, wv);
 
     set("legR", legR); set("legL", legL); set("shinR", shinR); set("shinL", shinL);
     set("armR", armR); set("armL", armL); set("foreR", foreR); set("foreL", foreL); set("head", head);
-    rigEl.setAttribute("transform", `translate(0 ${(bob + pose.y).toFixed(2)})`);
+    // --- secondary motion: the hat and apron lag behind the body
+    const dh = head - lastHead, vy = bob - lastBob; lastHead = head; lastBob = bob;
+    const hr = spring(hatRot, Math.max(-4, Math.min(4, -dh * 2.5)));
+    const hy = spring(hatY, Math.max(-3, Math.min(3, -vy * 2)));
+    hat.setAttribute("transform", `translate(0 ${hy.toFixed(2)}) rotate(${hr.toFixed(2)} 100 66)`);
+    apron.setAttribute("transform", `rotate(${spring(apronRot, 3 * moving * pose.walk + Math.sin(phase * 2) * 1.2 * w).toFixed(2)} 100 178)`);
+    // mustache: wiggles while waving, plus a rare twitch
+    const twitch = Math.pow(Math.max(0, Math.sin(t * .9)), 60) * Math.sin(t * 40) * 4;
+    stache.setAttribute("transform", `rotate(${(wv * Math.sin(t * 14) * 5 + twitch).toFixed(2)} 130 121)`);
+
+    // --- squash & stretch with the walk bounce, anchored at the feet
+    const sy = 1 + .014 * w * (2 * Math.abs(c) - 1), sx = 1 - (sy - 1) * .6;
+    rigEl.setAttribute("transform", `matrix(${sx.toFixed(4)} 0 0 ${sy.toFixed(4)} ${(100 - 100 * sx).toFixed(2)} ${(297 - 297 * sy + bob + pose.y).toFixed(2)})`);
+
+    // --- scene light (only touches the DOM when it changes; no filter at all in daylight)
+    const col = WARM.map((v, i) => Math.round(mix(mix(255, v, light.warm), DUSK[i], light.dusk)));
+    const key = col.join() + "|" + light.rim.toFixed(2);
+    if (key !== lightKey) {
+      lightKey = key;
+      tint.setAttribute("flood-color", `rgb(${col.join()})`);
+      rim.setAttribute("flood-opacity", (light.rim * .75).toFixed(2));
+      if (light.warm + light.dusk + light.rim > .001) rigEl.setAttribute("filter", "url(#titoLight)");
+      else rigEl.removeAttribute("filter");
+    }
     shadow.setAttribute("rx", (46 - Math.abs(bob) * .8 - pose.y * .1).toFixed(1));
     shadow.style.opacity = 1 - st;
   }
 
-  return { pose, update };
+  return { pose, light, update };
 })();
