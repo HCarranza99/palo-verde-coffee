@@ -13,63 +13,177 @@ const World = (() => {
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const R = (a, b) => a + rnd() * (b - a);
 
-  function ridge(x0, x1, base, amp, step, color, extra = "") {
-    let d = `M${x0} 1000 L${x0} ${base}`;
-    for (let x = x0; x < x1; x += step) d += ` Q${x + step / 2} ${base - R(0.4, 1) * amp} ${x + step} ${base - R(0, 0.45) * amp}`;
-    return `<path ${extra} d="${d} L${x1 + step} 1000Z" fill="${color}"/>`;
-  }
-
   /* ---------- reusable props ---------- */
-  /* A coffee shrub the way it actually grows: upright stems, tiers of slightly
-     drooping lateral branches, glossy paired leaves, and cherries clustered at
-     the leaf nodes close to the stem, ripening unevenly (red, orange, yellow, green). */
-  const LEAF = ["#2E4A2A", "#355431", "#3E5F37", "#47693E", "#2A4226", "#3A5A33"];
   function cherry(cx, cy, r, col) {
     return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${col}"/><circle cx="${(cx - r * .35).toFixed(1)}" cy="${(cy - r * .38).toFixed(1)}" r="${(r * .3).toFixed(1)}" fill="#fff" opacity=".35"/>`;
   }
-  function ripeColor() {
-    const r = rnd();
-    return r < .34 ? "#B3261E" : r < .6 ? "#951C17" : r < .74 ? "#D0562A" : r < .84 ? "#E0A33A" : "#8FA55B";
-  }
-  function coffeeBush(x, s = 1, id = "") {
-    const h = 350 * s, y = G, tiers = 11;
-    let back = "", stems = "", br = "", leaves = "", fruit = "";
-    for (const o of [-9, 7]) stems += `<path d="M${x + o} ${y} Q${x + o * 2.2} ${y - h * .5} ${x + o * .4} ${y - h * .9}" stroke="#6A5643" stroke-width="${5 * s}" fill="none" stroke-linecap="round"/>`;
-    for (let i = 0; i < tiers; i++) {
-      const ty = y - 34 * s - i * (h - 60 * s) / tiers;
-      const len = (78 + 40 * Math.sin(Math.PI * (i + 1.2) / (tiers + 1)) - i * 2) * s * R(.85, 1.1);   // rounded, not conical
+
+  /* A coffee plant the way it actually grows: one trunk, tiers of branches that leave it
+     almost flat and droop at the tip, a line of cherries hugging each branch (mostly ripe,
+     a few still green) and big glossy leaves in pairs. Drawn once around (0,0) = trunk at the
+     ground, ~250 units tall, then reused with <use>. Colours arrive as CSS variables so each
+     row can be hazed toward the sky; --fruit:0 hides the cherries on the far rows. */
+  const f1 = n => n.toFixed(1);
+  const CAFETO = (() => {
+    let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const REDS = ["#C02A20", "#C02A20", "#9E1D18", "#B3261E", "#A8221B", "#C02A20", "#9E1D18", "#D6532A"];
+    const GREENS = ["#8FA55B", "#7E9A4E", "#A3B562"];
+    const cherryCol = () => rnd() < .16 ? GREENS[Math.floor(rnd() * GREENS.length)] : REDS[Math.floor(rnd() * REDS.length)];
+    const leaf = (x, y, ang, len, fill) => `<path transform="translate(${f1(x)} ${f1(y)}) rotate(${f1(ang)}) scale(${(len / 28).toFixed(2)})" d="M0 0 C6 -7 18 -8 28 0 C18 7 6 6 0 0Z" fill="${fill}"/>`;
+    // a soft mass behind the branches, so from far away the plant still reads as one shape
+    let back = [[0, -66, 54], [-50, -70, 36], [50, -68, 36], [0, -126, 50], [-34, -134, 34], [34, -136, 34], [0, -186, 40], [0, -230, 26]]
+      .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="var(--shade)"/>`).join("");
+    let wood = `<path d="M-4.5 0 L-2 -232 L2 -232 L4.5 0Z" fill="var(--wood)"/>`, leaves = "", fruit = "";
+    [-46, -80, -114, -148, -182, -214].forEach((y, i) => {
+      const L = [82, 92, 92, 84, 70, 50][i];
       for (const dir of [-1, 1]) {
-        const droop = len * R(.12, .24);
-        br += `<path d="M${x + dir * 5 * s} ${ty} Q${x + dir * len * .5} ${ty - 6 * s} ${x + dir * len} ${ty + droop}" stroke="#5C5040" stroke-opacity=".8" stroke-width="${2 * s}" fill="none"/>`;
-        for (let k = .18; k <= 1.01; k += .13) {
-          const px = x + dir * len * k, py = ty + droop * k * k - 5 * s * (1 - k);
-          for (const side of [-1, 1]) {
-            const ang = (dir > 0 ? 0 : 180) + side * R(32, 58) + dir * 14 * k + R(-8, 8);
-            leaves += `<use href="#leaf" fill="${LEAF[Math.floor(R(0, LEAF.length))]}" transform="translate(${px.toFixed(1)} ${py.toFixed(1)}) rotate(${ang.toFixed(0)}) scale(${(s * R(1.05, 1.4) * (1.15 - k * .3)).toFixed(2)})"/>`;
-          }
-          if (k < .6 && i > 0 && i < tiers - 2 && rnd() < .42) {        // a cluster of cherries hugging the node
-            const n = 2 + Math.floor(R(0, 3));
-            for (let c = 0; c < n; c++) fruit += cherry(px + R(-8, 8) * s, py + R(1, 10) * s, R(4.6, 6.2) * s, ripeColor());
-          }
+        const droop = L * .3, cx = dir * L * .5, ex = dir * L;
+        const at = k => [2 * (1 - k) * k * cx + k * k * ex, (1 - k) * (1 - k) * y + 2 * (1 - k) * k * (y - 5) + k * k * (y + droop)];
+        wood += `<path d="M0 ${y} Q${f1(cx)} ${y - 5} ${f1(ex)} ${f1(y + droop)}" stroke="var(--wood)" stroke-width="${f1(3.4 - i * .25)}" fill="none" stroke-linecap="round"/>`;
+        // shade leaves behind, lit leaves in front: light comes from the upper right
+        for (const k of [.55, .85]) { const [x, yy] = at(k); back += leaf(x, yy, dir > 0 ? 20 : 160, 34, "var(--shade)"); }
+        for (const k of [.38, .68, .98]) {
+          const [x, yy] = at(k), lit = (dir > 0 && i >= 2) || (i >= 4 && k > .9), j = () => (rnd() - .5) * 24;
+          leaves += leaf(x, yy, (dir > 0 ? -28 : -152) + j(), 40 + k * 6, lit ? "var(--light)" : "var(--body)");
+          leaves += leaf(x, yy, (dir > 0 ? 42 : 138) + j(), 38 + k * 6, "var(--body)");
+        }
+        // the line of cherries hugging the branch, densest near the trunk
+        for (let k = .12; k < .72; k += 22 / L) {
+          const [x, yy] = at(k);
+          [[0, -2.6], [dir * 6.5, -1.4], [dir * 2.5, 4], [dir * 9, 3.4]].slice(0, 3 + (rnd() < .5 ? 1 : 0)).forEach(([dx, dy]) =>
+            fruit += `<circle cx="${f1(x + dx)}" cy="${f1(yy + dy)}" r="4.2" fill="${cherryCol()}"/>`);
         }
       }
+    });
+    [-130, -95, -60].forEach((a, j) => leaves += leaf(0, -228, a, 32, j === 2 ? "var(--light)" : "var(--body)"));
+    return `<g id="cafeto">${back}${wood}${leaves}<g style="opacity:var(--fruit,1)">${fruit}</g></g>`;
+  })();
+
+  /* The cafetal: rows of the same plant following the hill's contour, big and dark up front,
+     small and hazy at the back (layout tuned in design/cafetos). */
+  const ROWS = { size: .95, gap: 1, rows: 5, rowGap: 74, depth: .75, curve: 70, haze: .8, stagger: .15, vary: .19 };
+  const SHADES = { shade: "#2E4D2D", body: "#3F6639", light: "#6E9A55", wood: "#6A5643" }, HAZE = "#E9E6CF";
+  const mixHex = (a, b, t) => "#" + [1, 3, 5].map(i => Math.round(parseInt(a.substr(i, 2), 16) * (1 - t) + parseInt(b.substr(i, 2), 16) * t).toString(16).padStart(2, "0")).join("");
+  function cafetal(x0, x1, pickX) {
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const { size, gap, rows, rowGap, depth, curve, haze: hz, stagger, vary } = ROWS;
+    const span = x1 - x0, ramp = 240;
+    const ease = x => { const e = Math.min(1, Math.max(0, Math.min(x - x0, x1 - x) / ramp)); return e * e * (3 - 2 * e); };
+    const contour = (x, t) => { const u = (x - x0) / span * 1600; return -curve * (.35 + t) * Math.sin((u - 200) / 520) - curve * .4 * t * Math.cos(u / 300); };
+    const rowY = (x, i, t) => G - ease(x) * (G - (G - i * rowGap * (1 - depth * t * .35) + contour(x, t)));
+    // the hill the rows climb, closing just under the ground line so the dirt path stays visible
+    let hill = "";
+    for (let x = x0 - 40; x <= x1 + 40; x += 30) hill += `${hill ? " L" : "M"}${x} ${f1(Math.min(G + 2, rowY(x, rows - 1, 1) - 30 * ease(x)))}`;
+    let g = `<path d="${hill} L${x1 + 40} ${G + 4} L${x0 - 40} ${G + 4}Z" fill="#9DB27A"/>`;
+    for (let i = rows - 1; i >= 0; i--) {
+      const t = rows > 1 ? i / (rows - 1) : 0, sc = size * (1 - depth * t), step = 200 * sc * gap, haze = hz * t;
+      const a = x0 + i * 60, b = x1 - i * 60;                 // back rows are shorter: the hill narrows toward the top
+      // the furrow each row stands on
+      let top = "", bot = "";
+      for (let x = a - 30; x <= b + 30; x += 30) { const y = rowY(x, i, t); top += `${top ? " L" : "M"}${x} ${f1(y - 6 * sc)}`; bot = ` L${x} ${f1(y + 10 * sc)}` + bot; }
+      g += `<path d="${top}${bot}Z" fill="${mixHex("#7E9659", HAZE, haze)}"/>`;
+      g += `<g style="${Object.entries(SHADES).map(([k, v]) => `--${k}:${mixHex(v, HAZE, haze)}`).join(";")}">`;
+      // the front row is anchored on the plant Tito picks from
+      let start = i === 0 ? pickX - Math.floor((pickX - a) / step) * step : a + (i % 2) * step * stagger;
+      for (let x = start; x <= b; x += step) {
+        const v = i === 0 && Math.abs(x - pickX) < 1 ? 1.05 : 1 + (rnd() * 2 - 1) * vary;
+        g += `<use href="#cafeto" transform="translate(${f1(x)} ${f1(rowY(x, i, t))}) scale(${(sc * v).toFixed(3)})"${i === 0 ? "" : ' style="--fruit:0"'}/>`;
+      }
+      g += `</g>`;
     }
-    // a few leaves at the crown
-    for (let j = 0; j < 4; j++) leaves += `<use href="#leaf" fill="${LEAF[j % LEAF.length]}" transform="translate(${x + R(-10, 10)} ${y - h + 30 + R(0, 20)}) rotate(${-160 + j * 45 + R(-10, 10)}) scale(${s * 1.1})"/>`;
-    back = `<ellipse cx="${x}" cy="${y - h * .5}" rx="${95 * s}" ry="${h * .44}" fill="#22361F" opacity=".85"/>`;
-    return `<g ${id ? `id="${id}"` : ""}>${stems}${back}${br}${leaves}${fruit}</g>`;
+    return `<g>${g}</g>`;
   }
 
-  function paloVerde(x, s = 1) {           // the brand's namesake tree: green bark, airy canopy
-    const y = G, h = 520 * s;
-    let g = `<g>`;
-    g += `<path d="M${x} ${y} Q${x - 10} ${y - h * .4} ${x - 60 * s} ${y - h * .7} M${x} ${y - h * .35} Q${x + 30 * s} ${y - h * .55} ${x + 90 * s} ${y - h * .72} M${x - 4} ${y - h * .5} Q${x + 4} ${y - h * .75} ${x} ${y - h * .9}" stroke="#7FA05A" stroke-width="${16 * s}" fill="none" stroke-linecap="round"/>`;
-    [[-60, .74, 110], [90, .76, 120], [0, .92, 130], [-130, .62, 80], [150, .62, 80]].forEach(([dx, dy, r]) => {
-      g += `<ellipse cx="${x + dx * s}" cy="${y - h * dy}" rx="${r * s}" ry="${r * .55 * s}" fill="#B9C76A" opacity=".85"/>`;
-      g += `<ellipse cx="${x + dx * s + 10}" cy="${y - h * dy - 10}" rx="${r * .6 * s}" ry="${r * .3 * s}" fill="#D9D77A" opacity=".8"/>`;
-    });
-    return g + `</g>`;
+  /* ---------- background trees ----------
+     Species that really grow with coffee: the palo verde the brand is named after, guaba (Inga)
+     and poró (Erythrina) that shade the coffee, and plátano planted between the rows.
+     Each is drawn around (0,0) = trunk at the ground, ~420 units tall. */
+  function smooth(pts, closed = false) {             // Catmull-Rom through points, as cubic beziers
+    const P = closed ? [pts.at(-1), ...pts, pts[0], pts[1]] : [pts[0], ...pts, pts.at(-1)];
+    let d = `M${f1(P[1][0])} ${f1(P[1][1])}`;
+    for (let i = 1; i < P.length - 2; i++) {
+      const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
+      d += ` C${f1(p1[0] + (p2[0] - p0[0]) / 6)} ${f1(p1[1] + (p2[1] - p0[1]) / 6)} ${f1(p2[0] - (p3[0] - p1[0]) / 6)} ${f1(p2[1] - (p3[1] - p1[1]) / 6)} ${f1(p2[0])} ${f1(p2[1])}`;
+    }
+    return d + (closed ? "Z" : "");
   }
+  const TREE = (() => {
+    let seed = 1; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647, Rn = (a, b) => a + rnd() * (b - a);
+    // a lobed crown: one path whose edge swells into leafy lobes, flatter underneath like a real canopy
+    function crown(cx, cy, rx, ry, lobes, depth, flatBottom) {
+      const pts = [];
+      for (let i = 0; i < lobes * 2; i++) {
+        const a = Math.PI * 2 * i / (lobes * 2), out = i % 2 ? 1 - depth * Rn(.6, 1) : 1 + depth * Rn(0, .25);
+        let y = cy + Math.sin(a) * ry * out;
+        if (Math.sin(a) > 0) y = cy + (y - cy) * flatBottom;
+        pts.push([cx + Math.cos(a) * rx * out, y]);
+      }
+      return smooth(pts, true);
+    }
+    const branch = (pts, w, col) => `<path d="${smooth(pts)}" stroke="${col}" stroke-width="${w}" fill="none" stroke-linecap="round"/>`;
+    const twigs = (list, w, col) => list.map(([x, y, tx, ty]) => branch([[x, y], [(x + tx) / 2, (y + ty) / 2 - 7], [tx, ty]], w, col)).join("");
+    return {
+      // green bark, many thin branches, a feathery see-through canopy and yellow blossoms
+      paloVerde() {
+        seed = 11;
+        let g = branch([[0, 0], [-4, -70], [0, -130]], 16, "#7FA05A");
+        const tips = [[-170, -290], [-90, -370], [10, -410], [100, -380], [175, -300]];
+        tips.forEach(([x, y], i) => g += branch([[0, -120], [x * .35, y * .55], [x, y]], 9 - Math.abs(i - 2) * 1.5, i % 2 ? "#8DB062" : "#7FA05A"));
+        tips.forEach(([x, y]) => g += branch([[x * .6, y * .78], [x * .8 + 30, y * .9], [x + 40, y + 10]], 4, "#8DB062"));
+        let leaves = "", flowers = "";
+        [[-160, -300], [-110, -350], [-40, -390], [30, -405], [95, -375], [160, -310], [-60, -320], [60, -330], [0, -350], [-130, -260], [130, -262], [-90, -290], [90, -295], [-20, -300], [30, -365], [-75, -380], [140, -340], [-150, -330]].forEach(([cx, cy]) => {
+          for (let k = 0; k < 28; k++) {
+            const x = cx + Rn(-42, 42), y = cy + Rn(-24, 24);
+            leaves += `<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="7" ry="2.4" transform="rotate(${f1(Rn(-60, 60))} ${f1(x)} ${f1(y)})" fill="${rnd() < .55 ? "#A9BD63" : "#C3CD72"}"/>`;
+            if (rnd() < .2) flowers += `<circle cx="${f1(x + Rn(-6, 6))}" cy="${f1(y + Rn(-6, 6))}" r="3.4" fill="#EBC63F"/>`;
+          }
+        });
+        return g + leaves + flowers;
+      },
+      // Inga: the classic coffee shade tree, a wide flat umbrella; branches reach into the canopy
+      guaba() {
+        seed = 21;
+        let g = branch([[0, 0], [-3, -110], [-40, -220], [-60, -290]], 18, "#6E5A44") + branch([[-3, -110], [30, -180], [80, -250], [110, -295]], 13, "#6E5A44") + branch([[-6, -150], [-90, -200], [-150, -250], [-175, -280]], 9, "#6E5A44");
+        g += twigs([[-40, -220, -10, -300], [-40, -220, -110, -285], [80, -250, 40, -305], [80, -250, 160, -280], [-150, -250, -200, -275]], 5, "#6E5A44");
+        g += `<path d="${crown(-10, -290, 215, 95, 9, .16, .45)}" fill="#4A7740"/>`;
+        g += `<path d="${crown(14, -312, 175, 70, 8, .15, .4)}" fill="#5F8A4B"/>`;
+        g += `<path d="${crown(50, -334, 110, 42, 6, .18, .45)}" fill="#7CA35C"/>`;
+        return g;
+      },
+      // Erythrina: tiered irregular crown with red-orange flowers on top, a branch into every tier
+      poro() {
+        seed = 31;
+        let g = branch([[0, 0], [4, -120], [-20, -250], [-15, -350]], 16, "#7A6650") + branch([[4, -120], [60, -200], [90, -305]], 11, "#7A6650") + branch([[-10, -190], [-100, -240], [-120, -292]], 8, "#7A6650");
+        g += twigs([[90, -260, 140, -305], [90, -260, 50, -312], [-100, -240, -165, -292], [-18, -300, -70, -352], [-18, -300, 40, -355]], 4.5, "#7A6650");
+        let fl = "";
+        [[-120, -295, 85, 44], [90, -310, 95, 46], [-15, -360, 105, 54]].forEach(([x, y, rx, ry]) => {
+          g += `<path d="${crown(x, y, rx, ry, 7, .2, .5)}" fill="#4F7D44"/>`;
+          g += `<path d="${crown(x + 16, y - 10, rx * .7, ry * .6, 6, .2, .5)}" fill="#6E9A55"/>`;
+          for (let k = 0; k < 9; k++) fl += `<ellipse cx="${f1(x + Rn(-rx * .7, rx * .7))}" cy="${f1(y - ry * Rn(.3, .85))}" rx="4.5" ry="7" transform="rotate(${f1(Rn(-30, 30))} ${f1(x)} ${f1(y)})" fill="${rnd() < .5 ? "#E0603A" : "#D04A2C"}"/>`;
+        });
+        return g + fl;
+      },
+      // Musa: long arching leaves with a midrib and a few tears
+      platano() {
+        let g = `<path d="M-14 0 Q-8 -120 -5 -210 L7 -210 Q10 -120 14 0Z" fill="#7C9A52"/><path d="M4 -210 L7 -210 Q10 -120 14 0 L6 0Z" fill="#000" opacity=".1"/>`;
+        [[-165, 190, "#4C7A42"], [-135, 210, "#5E8A4C"], [-100, 170, "#6E9A55"], [-70, 200, "#5E8A4C"], [-35, 185, "#4C7A42"], [-15, 150, "#6E9A55"], [-118, 120, "#7FA65E"]].forEach(([a, L, c]) => {
+          const w = L * .16;
+          g += `<g transform="translate(1 -205) rotate(${a})"><path d="M0 0 C${f1(L * .3)} ${f1(-w)} ${f1(L * .75)} ${f1(-w * 1.1)} ${L} ${f1(L * .12)} C${f1(L * .72)} ${f1(w * .6)} ${f1(L * .3)} ${f1(w * .8)} 0 0Z" fill="${c}"/>` +
+            `<path d="M0 0 Q${f1(L * .5)} ${f1(-L * .02)} ${f1(L * .98)} ${f1(L * .11)}" stroke="#2F5230" stroke-opacity=".35" stroke-width="2.5" fill="none"/>` +
+            `<path d="M${f1(L * .45)} ${f1(-w * .9)} l6 ${f1(w * .7)} M${f1(L * .65)} ${f1(-w * .85)} l5 ${f1(w * .6)}" stroke="#F8ECD8" stroke-width="2.5"/></g>`;
+        });
+        return g;
+      },
+    };
+  })();
+  // background hills: two overlapping sine swells, smooth enough to read as distant land
+  const hillY = (x, base, amp, p1, p2) => base - amp * (.55 + .28 * Math.sin(x / 310 + p1) + .17 * Math.sin(x / 140 + p2));
+  function hillPath(x0, x1, base, amp, p1, p2, col, extra = "") {
+    const pts = []; for (let x = x0; x <= x1; x += 40) pts.push([x, hillY(x, base, amp, p1, p2)]);
+    return `<path ${extra} d="${smooth(pts)} L${x1} 1000 L${x0} 1000Z" fill="${col}"/>`;
+  }
+  // everything behind the farm is washed slightly toward the haze so it sits back
+  const wash = str => str.replace(/#[0-9A-Fa-f]{6}\b/g, c => mixHex(c, "#E9EDE0", .18));
 
   function house(x, w, h, wall, roof, opts = {}) {
     const y = G;
@@ -82,13 +196,35 @@ const World = (() => {
     return g + `</g>`;
   }
 
+  // the family house: same silhouette as house(), finished with a roof edge, eave shadow,
+  // window bars + sill, door panel + knob + step and a capped chimney
+  function farmHouse(x, w = 300, h = 230) {
+    const y = G, rt = y - h - h * .45, wx = x + w * .12, wy = y - h * .7, ww = w * .26, wh = h * .3, dx = x + w * .6, dw = w * .22;
+    return `<g>
+      <rect x="${x + 92}" y="${y - 330}" width="26" height="70" fill="#8C5A3C"/><rect x="${x + 86}" y="${y - 336}" width="38" height="10" rx="3" fill="#6E4430"/>
+      <rect x="${x}" y="${y - h}" width="${w}" height="${h}" fill="#F1E4CF"/>
+      <rect x="${x + w * .78}" y="${y - h}" width="${w * .22}" height="${h}" fill="#000" opacity=".06"/>
+      <rect x="${x}" y="${y - h}" width="${w}" height="16" fill="#000" opacity=".07"/>
+      <rect x="${x}" y="${y - 14}" width="${w}" height="14" fill="#D9C7AC"/>
+      <path d="M${x - 24} ${y - h + 4} L${x + w / 2} ${rt} L${x + w + 24} ${y - h + 4}Z" fill="#B4532E"/>
+      <path d="M${x + w / 2} ${rt} L${x + w + 24} ${y - h + 4} L${x + w / 2 + 30} ${y - h + 4}Z" fill="#000" opacity=".08"/>
+      <path d="M${x - 24} ${y - h + 4} L${x + w / 2} ${rt} L${x + w + 24} ${y - h + 4}" stroke="#963F22" stroke-width="10" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+      <rect class="win" x="${wx}" y="${wy}" width="${ww}" height="${wh}" rx="6" fill="#9FC6D6" stroke="#6B4A36" stroke-width="7"/>
+      <path d="M${wx + ww / 2} ${wy} V${wy + wh} M${wx} ${wy + wh / 2} H${wx + ww}" stroke="#6B4A36" stroke-width="5"/>
+      <path d="M${wx + 8} ${wy + wh - 8} L${wx + ww * .45} ${wy + 8}" stroke="#fff" stroke-width="6" opacity=".35" stroke-linecap="round"/>
+      <rect x="${wx - 8}" y="${wy + wh + 2}" width="${ww + 16}" height="9" rx="3" fill="#8C5A3C"/>
+      <rect x="${dx}" y="${y - h * .58}" width="${dw}" height="${h * .58}" rx="6" fill="#6B4A36"/>
+      <rect x="${dx + 8}" y="${y - h * .58 + 10}" width="${dw - 16}" height="${h * .58 - 26}" rx="4" fill="#7A5640"/>
+      <circle cx="${dx + dw - 12}" cy="${y - h * .3}" r="4" fill="#D9A54A"/>
+      <rect x="${dx - 8}" y="${y - 8}" width="${dw + 16}" height="10" rx="3" fill="#BDB4A8"/></g>`;
+  }
+
   function lamp(x) {
     return `<g><rect x="${x - 5}" y="${G - 330}" width="10" height="330" fill="#2E2A2A"/><path d="M${x} ${G - 330} q0 -20 30 -20 h10" stroke="#2E2A2A" stroke-width="8" fill="none"/><rect x="${x + 28}" y="${G - 352}" width="26" height="16" rx="4" fill="#2E2A2A"/>
       <circle class="glow" cx="${x + 41}" cy="${G - 330}" r="70" fill="url(#lampGlow)" opacity="0"/><circle cx="${x + 41}" cy="${G - 334}" r="7" fill="#FFE2A0"/></g>`;
   }
 
   const defs = `<defs>
-    <g id="leaf"><path d="M0 0 C7 -9 21 -11 36 -1 C22 9 8 8 0 0Z"/><path d="M2 0 Q18 -3 34 -1" stroke="#fff" stroke-opacity=".22" stroke-width="1.3" fill="none"/><path d="M6 -3 C12 -7 20 -8 28 -4" stroke="#fff" stroke-opacity=".12" stroke-width="2.5" fill="none"/></g>
     <radialGradient id="lampGlow"><stop offset="0" stop-color="#FFD98A" stop-opacity=".9"/><stop offset="1" stop-color="#FFD98A" stop-opacity="0"/></radialGradient>
     <pattern id="beansPat" width="22" height="14" patternUnits="userSpaceOnUse"><ellipse cx="6" cy="7" rx="5" ry="3.5" fill="#6B4A2E"/><ellipse cx="17" cy="4" rx="5" ry="3.5" fill="#7B5636"/><ellipse cx="15" cy="11" rx="4.5" ry="3" fill="#5D3E25"/></pattern>
     <pattern id="wavePat" width="120" height="40" patternUnits="userSpaceOnUse"><path d="M0 20 q30 -14 60 0 t60 0" stroke="#A9CFDB" stroke-width="4" fill="none"/></pattern>
@@ -98,7 +234,7 @@ const World = (() => {
   /* ---------------- FAR ---------------- */
   function far() {
     let s = defs;
-    s += `<g id="farHills">${ridge(-100, 2400, 600, 260, 300, "#D4CBB4")}${ridge(-100, 2400, 680, 200, 220, "#C2C3A2")}</g>`;
+    s += `<g id="farHills">${wash(hillPath(-100, 2600, 600, 250, 1.2, .4, "#C6D2C4") + hillPath(-100, 2600, 670, 190, 3.1, 2.2, "#AFC2AE"))}</g>`;
     let city = "";
     for (let x = 1500; x < 5000;) { const w = R(50, 130), h = R(90, 340); city += `<rect x="${x}" y="${740 - h}" width="${w}" height="${h + 300}" fill="#B9A6AC"/>`; x += w + R(4, 20); }
     s += `<g id="farCity" opacity="0">${city}</g>`;
@@ -108,11 +244,25 @@ const World = (() => {
   /* ---------------- MID ---------------- */
   function mid() {
     let s = defs, hills = "";
-    hills += ridge(-100, 8000, 700, 170, 380, "#A9B98A");
-    // coffee rows on the hillside
-    for (let x = 40; x < 2600; x += 46) for (let r = 0; r < 3; r++) hills += `<ellipse cx="${x + r * 18}" cy="${700 + r * 26 + Math.sin(x / 180) * 18}" rx="15" ry="9" fill="#7E9662" opacity=".8"/>`;
-    hills += ridge(-100, 8000, 760, 90, 300, "#94A877");
-    for (let x = 300; x < 4200; x += R(380, 700)) hills += `<g transform="translate(${x} ${730 - .55 * G}) scale(.55) translate(${-x} 0)">${paloVerde(x, 1)}</g>`;
+    const mb = 735, ma = 150, p1 = .6, p2 = 1.7, X1 = 8000;
+    s += `<defs>${["paloVerde", "guaba", "poro", "platano"].map(k => `<g id="tree-${k}">${wash(TREE[k]())}</g>`).join("")}</defs>`;
+    hills += hillPath(-100, X1, mb, ma, p1, p2, wash("#A7BC84"), 'id="loma"');
+    // far coffee rows: dashed stripes that follow the loma's contour, clipped to it
+    hills += `<clipPath id="lomaClip"><use href="#loma"/></clipPath><g clip-path="url(#lomaClip)">`;
+    for (let k = 1; k <= 9; k++) {
+      const pts = []; for (let x = -100; x <= 6200; x += 40) pts.push([x, hillY(x, mb, ma, p1, p2) + k * 15 + k * k * 1.2]);
+      hills += `<path d="${smooth(pts)}" stroke="${wash("#8FA96E")}" stroke-width="${f1(3 + k * .5)}" fill="none" stroke-linecap="round" stroke-dasharray="${f1(18 + k * 3)} ${f1(5 + k)}"/>`;
+    }
+    hills += `</g>`;
+    // trees on the loma, cycling the four species, nearer (lower) ones drawn last
+    let ts = 77; const tr = () => (ts = (ts * 16807) % 2147483647) / 2147483647;
+    const sp = ["paloVerde", "guaba", "poro", "platano"], trees = [];
+    for (let i = 0, step = 1600 / 12; -100 + (i + .5) * step < 6200; i++) {
+      const x = -100 + (i + .5) * step + (tr() * 120 - 60), y = hillY(x, mb, ma, p1, p2) + 18 + tr() * 22, sc = .36 + tr() * .14;
+      trees.push([y, `<use href="#tree-${sp[i % 4]}" transform="translate(${f1(x)} ${f1(y)}) scale(${sc.toFixed(3)})"/>`]);
+    }
+    hills += trees.sort((a, b) => a[0] - b[0]).map(t => t[1]).join("");
+    hills += hillPath(-100, X1, 800, 50, 2.4, .9, "#97B072");
     s += `<g id="midHills">${hills}</g>`;
     let city = "";
     for (let x = 3300; x < 8000;) {
@@ -142,15 +292,14 @@ const World = (() => {
     s += `<path d="M-200 ${G + 60} Q600 ${G + 40} 1200 ${G + 70} T2400 ${G + 50}" stroke="#B89E74" stroke-width="40" fill="none" opacity=".55"/>`;
 
     /* -- 01 farm -- */
-    s += house(140, 300, 230, "#F1E4CF", "#B4532E");
-    s += `<rect x="232" y="${G - 330}" width="26" height="70" fill="#8C5A3C"/>`;
+    s += `<defs>${CAFETO}</defs>`;
+    s += `<g transform="translate(2330 ${G}) scale(.85)">${TREE.paloVerde()}</g>`;
+    s += cafetal(520, 2280, 1300);
+    s += farmHouse(140);
     s += `<g><rect x="610" y="${G - 170}" width="12" height="170" fill="#7A5638"/><rect x="700" y="${G - 170}" width="12" height="170" fill="#7A5638"/>
       <rect x="586" y="${G - 236}" width="150" height="80" rx="8" fill="#9A6E48"/><text x="661" y="${G - 202}" text-anchor="middle" font-family="Fraunces" font-size="22" fill="#F3EBDD">FINCA</text><text x="661" y="${G - 176}" text-anchor="middle" font-family="Fraunces" font-size="20" font-style="italic" fill="#F3EBDD">Palo Verde</text></g>`;
-    [[850, .95], [1080, 1.0], [1630, 1.08], [1910, .96], [2180, 1.04]].forEach(([x, sc]) => s += coffeeBush(x, sc));
-    s += coffeeBush(1340, 1.12, "pickBush");
-    // the cherries Tito picks
-    s += `<g id="pickCherries">${[[1232, 618], [1246, 626], [1238, 634], [1254, 640], [1226, 628]].map(([x, y]) => `<g>${cherry(x, y, 7.5, "#B3261E")}</g>`).join("")}</g>`;
-    s += paloVerde(2330, .85);
+    // the cherries Tito picks, on an upper branch of the front plant at x = 1300
+    s += `<g id="pickCherries">${[[1240, 640], [1252, 644], [1246, 651], [1258, 648], [1234, 646]].map(([x, y]) => `<g>${cherry(x, y, 6, "#B3261E")}</g>`).join("")}</g>`;
 
     /* -- 02 dry + roast -- */
     [2420, 2700].forEach(x => {
