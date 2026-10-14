@@ -219,6 +219,33 @@ const World = (() => {
       <rect x="${dx - 8}" y="${y - 8}" width="${dw + 16}" height="10" rx="3" fill="#BDB4A8"/></g>`;
   }
 
+  /* ---------- drying beds (chapter 2) ----------
+     Raised to Tito's chest on wooden legs, with a mesh tray that sags a little. */
+  const DRY = { G, FEET: 872, TOP: 742, BED1: [2385, 2605], BED2: [2630, 2850] }, DRY_BEDS = [DRY.BED1, DRY.BED2];
+  function bedBack([x0, x1]) {
+    const T = DRY.TOP;
+    let g = `<ellipse cx="${(x0 + x1) / 2}" cy="${G + 2}" rx="${(x1 - x0) * .55}" ry="7" fill="#000" opacity=".1"/>`;
+    g += `<rect x="${x0 + 16}" y="${T}" width="9" height="${G - T}" fill="#5E4128"/><rect x="${x1 - 25}" y="${T}" width="9" height="${G - T}" fill="#5E4128"/>`;
+    g += `<path d="M${x0} ${T + 6} Q${(x0 + x1) / 2} ${T + 22} ${x1} ${T + 6} Z" fill="#E6D8BC" opacity=".9"/>`;
+    let mesh = ""; for (let x = x0 + 6; x < x1; x += 10) mesh += `M${x} ${T + 6} l-6 12 M${x} ${T + 6} l6 12 `;
+    return g + `<path d="${mesh}" stroke="#B9A47E" stroke-width="1.2" opacity=".8"/>`;
+  }
+  function bedFront([x0, x1]) {
+    const T = DRY.TOP;
+    return `<rect x="${x0 - 4}" y="${T - 4}" width="${x1 - x0 + 8}" height="11" rx="2" fill="#8A6040"/>` +
+      `<rect x="${x0 + 4}" y="${T + 4}" width="11" height="${G - T - 2}" fill="#7A5638"/><rect x="${x1 - 15}" y="${T + 4}" width="11" height="${G - T - 2}" fill="#7A5638"/>` +
+      `<path d="M${x0 + 12} ${G - 14} L${x1 - 12} ${T + 18}" stroke="#7A5638" stroke-width="5"/>`;
+  }
+  // a chalk slate on a stake above the cherries: how long this batch has dried, and its moisture.
+  // cx sits clear of Tito's face at the spots where he stops (2320, 2490, 2660, 2840)
+  function bedTag(cx, day, moisture) {
+    const w = 112, h = 60, y = DRY.TOP - 84;
+    return `<g><rect x="${cx - 3}" y="${y + h - 4}" width="6" height="${DRY.TOP - y - h + 2}" fill="#6E4A33"/>` +
+      `<rect x="${cx - w / 2}" y="${y}" width="${w}" height="${h}" rx="5" fill="#8A6040"/><rect x="${cx - w / 2 + 5}" y="${y + 5}" width="${w - 10}" height="${h - 10}" rx="3" fill="#33352F"/>` +
+      `<text x="${cx}" y="${y + 29}" text-anchor="middle" font-family="Manrope" font-weight="800" font-size="20" letter-spacing="1" fill="#F3EBDD">${day.toUpperCase()}</text>` +
+      `<text x="${cx}" y="${y + 47}" text-anchor="middle" font-family="Manrope" font-weight="700" font-size="14" fill="#BFD3E0">${moisture} moisture</text></g>`;
+  }
+
   function lamp(x) {
     return `<g><rect x="${x - 5}" y="${G - 330}" width="10" height="330" fill="#2E2A2A"/><path d="M${x} ${G - 330} q0 -20 30 -20 h10" stroke="#2E2A2A" stroke-width="8" fill="none"/><rect x="${x + 28}" y="${G - 352}" width="26" height="16" rx="4" fill="#2E2A2A"/>
       <circle class="glow" cx="${x + 41}" cy="${G - 330}" r="70" fill="url(#lampGlow)" opacity="0"/><circle cx="${x + 41}" cy="${G - 334}" r="7" fill="#FFE2A0"/></g>`;
@@ -302,11 +329,9 @@ const World = (() => {
     s += `<g id="pickCherries">${[[1240, 640], [1252, 644], [1246, 651], [1258, 648], [1234, 646]].map(([x, y]) => `<g>${cherry(x, y, 6, "#B3261E")}</g>`).join("")}</g>`;
 
     /* -- 02 dry + roast -- */
-    [2420, 2700].forEach(x => {
-      s += `<g><rect x="${x}" y="${G - 150}" width="10" height="150" fill="#7A5638"/><rect x="${x + 220}" y="${G - 150}" width="10" height="150" fill="#7A5638"/>
-        <rect x="${x - 10}" y="${G - 168}" width="250" height="26" fill="#9A6E48"/><rect x="${x - 4}" y="${G - 184}" width="238" height="20" fill="url(#beansPat)"/>
-        <path d="M${x - 20} ${G - 280} L${x + 250} ${G - 280}" stroke="#7A5638" stroke-width="8"/><path d="M${x - 20} ${G - 280} q135 40 270 0" fill="#EFE6D3" opacity=".8"/></g>`;
-    });
+    // two raised African beds; the cherries, sack, basket and rake on them are animated by drying.js
+    s += DRY_BEDS.map(bedBack).join("") + bedTag(2580, "Day 1", "65%") + bedTag(2775, "Day 18", "11%");
+    s += `<g id="dryBehind"></g>` + DRY_BEDS.map(bedFront).join("") + `<g id="dryFront"></g>`;
     // roastery building
     s += `<g id="roastery"><rect x="3020" y="${G - 420}" width="900" height="420" fill="#E9D9C3"/><rect x="3020" y="${G - 420}" width="900" height="420" fill="url(#brick)" opacity=".7"/>
       <rect x="3000" y="${G - 446}" width="940" height="34" fill="#3A2A20"/>
@@ -376,14 +401,15 @@ const World = (() => {
       el.innerHTML = `<svg viewBox="0 0 ${SIZE[key]} 1000" preserveAspectRatio="none">${html}</svg>`;
     };
     mk("lFar", "far", far()); mk("lMid", "mid", mid()); mk("lMain", "main", main()); mk("lFore", "fore", fore());
+    mk("lProps", "main", `<g id="dryHeld"></g>`);      // what Tito holds, drawn in front of him in world units
   }
 
   function resize(u) {
-    for (const [id, key] of [["lFar", "far"], ["lMid", "mid"], ["lMain", "main"], ["lFore", "fore"]]) {
+    for (const [id, key] of [["lFar", "far"], ["lMid", "mid"], ["lMain", "main"], ["lProps", "main"], ["lFore", "fore"]]) {
       const svg = document.querySelector(`#${id} svg`);
       svg.setAttribute("width", SIZE[key] * u); svg.setAttribute("height", 1000 * u);
     }
   }
 
-  return { build, resize, FACTOR, G };
+  return { build, resize, FACTOR, G, DRY };
 })();

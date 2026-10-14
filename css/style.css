@@ -248,6 +248,7 @@ footer .row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;m
 @media (prefers-reduced-motion:reduce){.grain,.marquee .track{animation:none}}
 
 /* journey stacking */
+#lProps{z-index:5;pointer-events:none}
 #lFore{z-index:5}
 #lFore svg{opacity:.95}
 #dusk{position:absolute;inset:0;z-index:5;background:linear-gradient(#2B2550,#8A4A5A);mix-blend-mode:multiply;opacity:0;pointer-events:none}

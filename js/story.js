@@ -85,8 +85,9 @@ $$("[data-speed]").forEach(img => gsap.fromTo(img, { yPercent: -10 }, { yPercent
    ========================================================================== */
 World.build();
 const journey = $("#journey"), actor = $("#actor");
-const L = { far: $("#lFar"), mid: $("#lMid"), main: $("#lMain"), fore: $("#lFore") };
+const L = { far: $("#lFar"), mid: $("#lMid"), main: $("#lMain"), props: $("#lProps"), fore: $("#lFore") };
 const state = { p: 400, cam: 0, lift: 0, tilt: 0, map: 0 };   // p = Tito's world x
+const dry = { q: 0 };                                           // progress of the drying-bed scene (drying.js)
 const P = Tito.pose;
 let u = 1, W = 1, H = 1, screenX = 0;
 const FEET = 872;   // Tito walks on the path, a bit in front of the ground line (y = 820)
@@ -120,7 +121,7 @@ function render(time) {
   const base = screenX - state.p * u;
   L.far.style.transform = `translate3d(${base * World.FACTOR.far}px, ${state.cam * u * .3}px,0)`;
   L.mid.style.transform = `translate3d(${base * World.FACTOR.mid}px, ${state.cam * u * .6}px,0)`;
-  L.main.style.transform = `translate3d(${base}px, ${state.cam * u}px,0)`;
+  L.main.style.transform = L.props.style.transform = `translate3d(${base}px, ${state.cam * u}px,0)`;
   L.fore.style.transform = `translate3d(${base * World.FACTOR.fore}px, ${state.cam * u * 1.3}px,0)`;
   actor.style.transform = `translate3d(${screenX - 100 * u}px, ${(FEET - 300 - state.lift) * u}px,0) rotate(${state.tilt}deg)`;
 
@@ -133,6 +134,7 @@ function render(time) {
 
   const dp = state.p - lastP; lastP = state.p;
   Tito.update(dp, time);
+  Drying.update(dry.q, time, FEET - 300 - state.lift);    // after Tito, so the drying poses win
 }
 gsap.ticker.add(render);
 
@@ -181,10 +183,9 @@ tl.to(state, { p: 1180, duration: 10, ease: "power1.inOut" }, 0)
 chapterSwap(1, 18);
 sky(18, 8, "#CFE3EA", "#F6EBD9");
 tl.to("#sun", { top: "8%", left: "48%", duration: 30 }, 0)
-  .to(state, { p: 2560, duration: 13, ease: "power1.inOut" }, 18)
-  .to("#basket", { opacity: 0, duration: .6 }, 29.5)
-  .to("#sack", { opacity: 1, duration: .6 }, 29.8)
-  .to(state, { p: 3220, duration: 8, ease: "power1.inOut" }, 31)
+  .fromTo(state, { p: 1180 }, { p: 2320, duration: 5.5, ease: "power1.inOut", immediateRender: false }, 18)
+  .fromTo(dry, { q: 0 }, { q: 1, duration: 12, immediateRender: false, onUpdate: () => { state.p = Drying.titoX(dry.q); } }, 23.5)
+  .fromTo(state, { p: 2840 }, { p: 3220, duration: 3.5, ease: "power1.inOut", immediateRender: false }, 35.5)
   .fromTo("#smoke .puff", { y: 0, scale: .8 }, { y: -260, scale: 1.6, opacity: 0, duration: 16, stagger: 1.5 }, 30)
   .to(P, { walk: 0, duration: 1 }, 38.5)
   .to("#sack", { opacity: 0, y: -20, duration: .8 }, 39.5)
