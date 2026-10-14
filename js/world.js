@@ -395,6 +395,7 @@ const World = (() => {
     for (const [id, key] of [["lFar", "far"], ["lMid", "mid"], ["lMain", "main"], ["lProps", "main"], ["lFore", "fore"]]) {
       const svg = document.querySelector(`#${id} svg`);
       svg.setAttribute("width", SIZE[key] * u); svg.setAttribute("height", 1000 * u);
+      svg.style.height = 1000 * u + "px";                 // the camera may pull back: the world is then shorter than the screen
     }
   }
 

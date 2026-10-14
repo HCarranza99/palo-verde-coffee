@@ -172,7 +172,10 @@ header.solid .cart-btn{background:var(--espresso);color:var(--cream)}
   .chapter h2{font-size:32px;margin:10px 0}
   .chapter p{font-size:14px}
   .chapter .facts{display:none}
-  .frame{top:auto;bottom:118px;width:30vw;right:12px}
+  /* bottom-left, over the ground Tito already walked past: the action happens around him and to his right */
+  .frame{top:auto;bottom:96px;right:auto;left:12px;width:26vw}
+  .frame .shot figcaption{padding:28px 10px 9px;font-size:11px}
+  .frame .shot img{filter:none}             /* no blur on phones: animating it is costly */
   .frame .count{display:none}
   .minimap{display:none}
   .route li{font-size:8px;letter-spacing:.08em}

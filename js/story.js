@@ -50,7 +50,20 @@ document.head.appendChild(style);
    Everything except the hero photo waits until the loader is gone,
    so the first screen gets the whole bandwidth. */
 function loadDeferredImages() {
-  $$("img[data-src]").forEach(img => { img.decoding = "async"; img.src = img.dataset.src; img.removeAttribute("data-src"); });
+  $$("img[data-src]").forEach(img => {
+    img.decoding = "async"; img.src = img.dataset.src; img.removeAttribute("data-src");
+    img.decode().catch(() => {});            // decoded ahead of time, not in the middle of a scene
+  });
+}
+/* Plays every scene once, unseen, while the loader is still up: each scene's first frame
+   (building its drawings, the browser warming up the code) happens here instead of mid-scroll. */
+function warmUp() {
+  const stage = onStage; onStage = true;
+  for (const [stop] of SCENES) for (let k = 1; k <= 4; k++) {
+    tl.time(stop - (4 - k) * .6); gsap.ticker.tick();
+  }
+  tl.time(0); gsap.ticker.tick();
+  onStage = stage;
 }
 
 const heroWords = splitWords($("#heroTitle"));
@@ -58,6 +71,7 @@ gsap.set(heroWords, { yPercent: 110 });
 gsap.set(".hero-fade", { opacity: 0, y: 20 });
 
 window.__loader.then(() => {
+  warmUp();
   const tl = gsap.timeline({ onComplete: () => { document.body.classList.remove("loading"); lenis && lenis.start(); ScrollTrigger.refresh(); } });
   tl.to(".ld-steam", { opacity: 0, duration: .3 }, 0)
     .to(".ld-center", { y: -40, opacity: 0, duration: .7, ease: "power3.in" }, .1)
@@ -92,15 +106,17 @@ const state = { p: 400, cam: 0, lift: 0, tilt: 0, map: 0 };   // p = Tito's worl
 const dry = { q: 0 };                                           // progress of the drying-bed scene (drying.js)
 const roast = { r: 0, k: 0 };                                   // roastery and packing scenes (roastery.js)
 const P = Tito.pose;
-let u = 1, W = 1, H = 1, screenX = 0;
+let u = 1, W = 1, H = 1, screenX = 0, oy = 0;   // oy: the world sits on the bottom edge when the camera pulls back
 const FEET = 872;   // Tito walks on the path, a bit in front of the ground line (y = 820)
 
 function measure() {
-  W = document.documentElement.clientWidth; H = window.innerHeight; u = H / 1000;   // journey is always 100vh
+  W = document.documentElement.clientWidth; H = window.innerHeight;   // journey is always 100vh
+  // on a phone held upright the camera pulls back, so more of each scene fits across the screen
+  u = H / 1000 * (W < 760 && H > W ? .72 : 1); oy = H - 1000 * u;
   screenX = W * (W < 760 ? 0.5 : 0.6);
   journey.style.setProperty("--u", u + "px");
   journey.style.setProperty("--wx", screenX + 58 * u + "px");   // where the box lands: the wipe grows from there
-  journey.style.setProperty("--wy", (FEET - 24) * u + "px");
+  journey.style.setProperty("--wy", oy + (FEET - 24) * u + "px");
   World.resize(u);
 }
 measure();
@@ -119,20 +135,24 @@ const clouds = Array.from({ length: 18 }, (_, i) => {
 });
 
 /* camera: positions every layer from Tito's world x and the vertical camera */
-let lastP = state.p;
+let lastP = state.p, onStage = true;
+new IntersectionObserver(([e]) => { onStage = e.isIntersecting; }).observe(journey);
 function render(time) {
   const base = screenX - state.p * u;
-  L.far.style.transform = `translate3d(${base * World.FACTOR.far}px, ${state.cam * u * .3}px,0)`;
-  L.mid.style.transform = `translate3d(${base * World.FACTOR.mid}px, ${state.cam * u * .6}px,0)`;
-  L.main.style.transform = L.props.style.transform = `translate3d(${base}px, ${state.cam * u}px,0)`;
-  L.fore.style.transform = `translate3d(${base * World.FACTOR.fore}px, ${state.cam * u * 1.3}px,0)`;
-  actor.style.transform = `translate3d(${screenX - 100 * u}px, ${(FEET - 300 - state.lift) * u}px,0) rotate(${state.tilt}deg)`;
+  if (!onStage) return;                                    // nothing to draw while the journey is off screen
+  L.far.style.transform = `translate3d(${base * World.FACTOR.far}px, ${oy + state.cam * u * .3}px,0)`;
+  L.mid.style.transform = `translate3d(${base * World.FACTOR.mid}px, ${oy + state.cam * u * .6}px,0)`;
+  L.main.style.transform = L.props.style.transform = `translate3d(${base}px, ${oy + state.cam * u}px,0)`;
+  L.fore.style.transform = `translate3d(${base * World.FACTOR.fore}px, ${oy + state.cam * u * 1.3}px,0)`;
+  actor.style.transform = `translate3d(${screenX - 100 * u}px, ${oy + (FEET - 300 - state.lift) * u}px,0) rotate(${state.tilt}deg)`;
 
   const f = Math.min(1, state.cam / 800), span = 3600;
   clouds.forEach(c => {
+    if (!c.high && f === 0 && c.hidden) return;             // the low clouds only show while flying
+    c.hidden = !c.high && f === 0;
     const x = ((c.x - state.p * c.d * .6) % span + span) % span - 400;
     const y = c.high ? c.y + state.cam * .1 : c.y + (1 - f) * 900 * c.d;
-    c.el.style.cssText = `width:${c.s * u}px;transform:translate3d(${x * u}px,${y * u}px,0);opacity:${c.high ? 1 : f}`;
+    c.el.style.cssText = `width:${c.s * u}px;transform:translate3d(${x * u}px,${oy + y * u}px,0);opacity:${c.high ? 1 : f}`;
   });
 
   const dp = state.p - lastP; lastP = state.p;
@@ -149,7 +169,8 @@ const chapterWords = chapters.map(c => splitWords(c.querySelector("h2")));
 chapters.forEach((c, i) => { if (i) gsap.set(chapterWords[i], { yPercent: 110 }); });
 gsap.set(chapters[0], { autoAlpha: 1 });
 gsap.set(shots[0], { clipPath: "inset(0% 0% 0% 0% round 16px)" });
-gsap.set(shots[0].querySelector("img"), { scale: 1, filter: "blur(0px)" });
+const unblur = matchMedia("(max-width:760px)").matches ? {} : { filter: "blur(0px)" };   // phones skip the blur (style.css)
+gsap.set(shots[0].querySelector("img"), { scale: 1, ...unblur });
 
 /* ---------------- master timeline (100 units) ---------------- */
 gsap.set("#bcherries circle", { scale: 0, transformOrigin: "50% 50%" });
@@ -172,7 +193,7 @@ function chapterSwap(i, t) {
   // photo: previous wipes up, next reveals from below while de-blurring
   tl.to(shots[i - 1], { clipPath: "inset(0% 0% 100% 0% round 16px)", duration: 1, ease: "power2.inOut" }, t)
     .fromTo(shots[i], { clipPath: "inset(100% 0% 0% 0% round 16px)" }, { clipPath: "inset(0% 0% 0% 0% round 16px)", duration: 1.2, ease: "power3.out" }, t + .5)
-    .to(shots[i].querySelector("img"), { scale: 1, filter: "blur(0px)", duration: 2, ease: "power2.out" }, t + .5);
+    .to(shots[i].querySelector("img"), { scale: 1, ...unblur, duration: 2, ease: "power2.out" }, t + .5);
 }
 const sky = (t, d, s1, s2, sun) => tl.to([skyEl, sunEl], { "--sky1": s1, "--sky2": s2, ...(sun ? { "--sun": sun } : {}), duration: d }, t)
   .to(journey, { backgroundColor: s2, duration: d }, t);
