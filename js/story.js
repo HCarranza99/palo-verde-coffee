@@ -139,6 +139,7 @@ function render(time) {
   Tito.update(dp, time);
   Drying.update(dry.q, time, FEET - 300 - state.lift);    // after Tito, so the scene poses win
   Roastery.update(roast.r, roast.k, time, FEET - 300 - state.lift);
+  Flight.update(state.map, state.cam / 800, time, screenX, W, H, skyEl.style.getPropertyValue("--sky2") || "#DCEBF0");
 }
 gsap.ticker.add(render);
 
@@ -153,7 +154,10 @@ gsap.set(shots[0].querySelector("img"), { scale: 1, filter: "blur(0px)" });
 /* ---------------- master timeline (100 units) ---------------- */
 gsap.set("#bcherries circle", { scale: 0, transformOrigin: "50% 50%" });
 gsap.set(["#plane", "#planeFront"], { scale: 0, svgOrigin: "100 250" });
-journey.style.setProperty("--sky1", "#F3D9AE"); journey.style.setProperty("--sky2", "#F8ECD8"); journey.style.setProperty("--sun", "#FFE3A3");
+// the sky colours live on the sky and the sun only: set on #journey they would restyle the whole world every frame
+const skyEl = $("#sky"), sunEl = $("#sun");
+gsap.set([skyEl, sunEl], { "--sky1": "#F3D9AE", "--sky2": "#F8ECD8", "--sun": "#FFE3A3" });
+gsap.set(journey, { backgroundColor: "#F8ECD8" });
 
 const tl = gsap.timeline({ paused: true, defaults: { ease: "none" }, onUpdate: () => hud() });
 
@@ -170,7 +174,8 @@ function chapterSwap(i, t) {
     .fromTo(shots[i], { clipPath: "inset(100% 0% 0% 0% round 16px)" }, { clipPath: "inset(0% 0% 0% 0% round 16px)", duration: 1.2, ease: "power3.out" }, t + .5)
     .to(shots[i].querySelector("img"), { scale: 1, filter: "blur(0px)", duration: 2, ease: "power2.out" }, t + .5);
 }
-const sky = (t, d, s1, s2, sun) => tl.to(journey, { "--sky1": s1, "--sky2": s2, ...(sun ? { "--sun": sun } : {}), duration: d }, t);
+const sky = (t, d, s1, s2, sun) => tl.to([skyEl, sunEl], { "--sky1": s1, "--sky2": s2, ...(sun ? { "--sun": sun } : {}), duration: d }, t)
+  .to(journey, { backgroundColor: s2, duration: d }, t);
 
 /* 01 — FARM: walk to the bush, pick cherries */
 tl.to(state, { p: 1180, duration: 10, ease: "power1.inOut" }, 0)
@@ -243,8 +248,6 @@ tl.to(["#plane", "#planeFront"], { scale: 0, rotation: 25, opacity: 0, duration:
 
 /* ---------------- HUD ---------------- */
 const nodes = $$("#routeNodes li"), fill = $("#routeFill"), dot = $("#routeDot");
-const flightPath = $("#flightPath"), flen = flightPath.getTotalLength();
-flightPath.style.strokeDasharray = flen;
 const bounds = [0, 18, 45, 59, 83];
 function hud() {
   const p = tl.progress(), t = tl.time();
@@ -253,11 +256,10 @@ function hud() {
   nodes.forEach((n, i) => n.classList.toggle("on", i <= Math.max(0, idx)));
   $("#shotNum").textContent = String(Math.max(0, idx) + 1).padStart(2, "0");
   const x = state.p;
-  const miles = x < 5150 ? (x - 400) / 4750 * 18 : x < 7850 ? 18 + (x - 5150) / 2700 * 2829 : 2847 + (x - 7850) / 530 * 6;
+  // real distances: a couple of miles around the finca, the great circle to Boston, then to the door
+  const miles = x < 5150 ? (x - 400) / 4750 * 2 : x < 7850 ? 2 + state.map * Flight.MILES : 2 + Flight.MILES + (x - 7850) / 530 * 6;
   $("#miles").textContent = Math.max(0, Math.round(miles)).toLocaleString("en-US");
-  flightPath.style.strokeDashoffset = flen * (1 - state.map);
-  const pt = flightPath.getPointAtLength(flen * state.map), pt2 = flightPath.getPointAtLength(Math.min(flen, flen * state.map + 1));
-  $("#mapPlane").setAttribute("transform", `translate(${pt.x} ${pt.y}) rotate(${Math.atan2(pt2.y - pt.y, pt2.x - pt.x) * 57.3})`);
+  Flight.minimap(state.map);
 }
 hud();
 
