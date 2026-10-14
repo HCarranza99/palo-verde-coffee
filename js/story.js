@@ -90,6 +90,7 @@ const journey = $("#journey"), actor = $("#actor");
 const L = { far: $("#lFar"), mid: $("#lMid"), main: $("#lMain"), props: $("#lProps"), fore: $("#lFore") };
 const state = { p: 400, cam: 0, lift: 0, tilt: 0, map: 0 };   // p = Tito's world x
 const dry = { q: 0 };                                           // progress of the drying-bed scene (drying.js)
+const roast = { r: 0, k: 0 };                                   // roastery and packing scenes (roastery.js)
 const P = Tito.pose;
 let u = 1, W = 1, H = 1, screenX = 0;
 const FEET = 872;   // Tito walks on the path, a bit in front of the ground line (y = 820)
@@ -136,7 +137,8 @@ function render(time) {
 
   const dp = state.p - lastP; lastP = state.p;
   Tito.update(dp, time);
-  Drying.update(dry.q, time, FEET - 300 - state.lift);    // after Tito, so the drying poses win
+  Drying.update(dry.q, time, FEET - 300 - state.lift);    // after Tito, so the scene poses win
+  Roastery.update(roast.r, roast.k, time, FEET - 300 - state.lift);
 }
 gsap.ticker.add(render);
 
@@ -185,21 +187,15 @@ tl.to("#sun", { top: "8%", left: "48%", duration: 30 }, 0)
   .fromTo(state, { p: 1180 }, { p: 2320, duration: 5.5, ease: "power1.inOut", immediateRender: false }, 18)
   .fromTo(dry, { q: 0 }, { q: 1, duration: 12, immediateRender: false, onUpdate: () => { state.p = Drying.titoX(dry.q); } }, 23.5)
   .fromTo(state, { p: 2840 }, { p: 3220, duration: 3.5, ease: "power1.inOut", immediateRender: false }, 35.5)
-  .fromTo("#smoke .puff", { y: 0, scale: .8 }, { y: -260, scale: 1.6, opacity: 0, duration: 16, stagger: 1.5 }, 30)
-  .to(P, { walk: 0, duration: 1 }, 38.5)
-  .to("#sack", { opacity: 0, y: -20, duration: .8 }, 39.5)
-  .to("#drum", { rotation: 1080, svgOrigin: "3490 663", duration: 9 }, 38.5)
-  .to("#coolBeans ellipse", { fill: "#4A2A16", duration: 4, stagger: .15 }, 40)
-  .to(P, { walk: 1, duration: 1 }, 45);
+  // the roastery: sack into the huller, belt, roast, into the cooling tray (Tito's x comes from the scene)
+  .fromTo(roast, { r: 0 }, { r: 1, duration: 6, immediateRender: false, onUpdate: () => { state.p = Roastery.titoR(roast.r); } }, 39);
 
 /* 03 — BAG */
 chapterSwap(2, 45);
-tl.to(state, { p: 4300, duration: 10, ease: "power1.inOut" }, 45.5)
-  .to("#bags", { x: 240, duration: 8 }, 47)
-  .to("#stamp", { y: 46, duration: .6, yoyo: true, repeat: 5, ease: "power2.in" }, 49)
-  .to("#box", { opacity: 1, duration: .5 }, 53.5)
-  .to(P, { carry: 1, duration: 1, ease: "power2.out" }, 53.3)
-  .to(state, { p: 5150, duration: 6, ease: "power1.inOut" }, 55.5);
+// packing: bucket to the filler, the line fills, seals and dates the bags into the box he carries off
+tl.fromTo(roast, { k: 0 }, { k: 1, duration: 10.5, immediateRender: false, onUpdate: () => { state.p = Roastery.titoK(roast.k); } }, 45)
+  .to(P, { carry: 1, duration: .01 }, 55.49)
+  .fromTo(state, { p: 4520 }, { p: 5150, duration: 6, ease: "power1.inOut", immediateRender: false }, 55.5);
 
 /* 04 — FLIGHT */
 chapterSwap(3, 59);
@@ -277,8 +273,11 @@ const SCENES = [   // [timeline time where the scene ends, seconds it takes]
   [23.5, 2],    // walk to the drying beds
   [28.7, 3.2],  // tip the basket, spread the cherries
   [35.5, 3.8],  // push the dry batch into the sack, shoulder it
-  [45, 3.2],    // to the roastery, roast
-  [53.5, 2.8],  // bag and stamp, pick up the box
+  [41.4, 3.4],  // to the roastery, sack into the huller, up the belt
+  [45, 3.6],    // roast, drop into the cooling tray
+  [49.4, 3],    // tray into the bucket, carry it to the filler
+  [51.6, 2.2],  // pour it into the filler
+  [55.5, 4.2],  // fill, seal and date the bags; close and lift the box
   [63.5, 2.8],  // up the hill, the paper plane
   [80, 4.2],    // the flight
   [86.5, 2.4],  // landing

@@ -253,7 +253,6 @@ const World = (() => {
 
   const defs = `<defs>
     <radialGradient id="lampGlow"><stop offset="0" stop-color="#FFD98A" stop-opacity=".9"/><stop offset="1" stop-color="#FFD98A" stop-opacity="0"/></radialGradient>
-    <pattern id="beansPat" width="22" height="14" patternUnits="userSpaceOnUse"><ellipse cx="6" cy="7" rx="5" ry="3.5" fill="#6B4A2E"/><ellipse cx="17" cy="4" rx="5" ry="3.5" fill="#7B5636"/><ellipse cx="15" cy="11" rx="4.5" ry="3" fill="#5D3E25"/></pattern>
     <pattern id="wavePat" width="120" height="40" patternUnits="userSpaceOnUse"><path d="M0 20 q30 -14 60 0 t60 0" stroke="#A9CFDB" stroke-width="4" fill="none"/></pattern>
     <pattern id="brick" width="60" height="30" patternUnits="userSpaceOnUse"><path d="M0 30 h60 M0 15 h60 M30 0 v15 M0 15 v15 M60 15 v15" stroke="#D6C2A6" stroke-width="2"/></pattern>
   </defs>`;
@@ -332,31 +331,19 @@ const World = (() => {
     // two raised African beds; the cherries, sack, basket and rake on them are animated by drying.js
     s += DRY_BEDS.map(bedBack).join("") + bedTag(2580, "Day 1", "65%") + bedTag(2775, "Day 18", "11%");
     s += `<g id="dryBehind"></g>` + DRY_BEDS.map(bedFront).join("") + `<g id="dryFront"></g>`;
-    // roastery building
+    // roastery building; its machines (huller, belt, roaster, cooling tray) are drawn by roastery.js
     s += `<g id="roastery"><rect x="3020" y="${G - 420}" width="900" height="420" fill="#E9D9C3"/><rect x="3020" y="${G - 420}" width="900" height="420" fill="url(#brick)" opacity=".7"/>
       <rect x="3000" y="${G - 446}" width="940" height="34" fill="#3A2A20"/>
       <rect x="3330" y="${G - 520}" width="420" height="80" rx="10" fill="#1E1410"/><text x="3540" y="${G - 468}" text-anchor="middle" font-family="Fraunces" font-size="40" fill="#F3EBDD">Roastery</text>
       <rect x="3800" y="${G - 760}" width="46" height="330" fill="#5A4436"/>
-      <g id="smoke" fill="#F3EEE6">${[0, 1, 2, 3, 4].map(i => `<circle class="puff" cx="${3823 + i * 14}" cy="${G - 790 - i * 70}" r="${26 + i * 10}" opacity="${.85 - i * .15}"/>`).join("")}</g>
-      <rect x="3300" y="${G - 340}" width="470" height="340" rx="14" fill="#3A2A20"/>
-      <rect x="3318" y="${G - 322}" width="434" height="322" rx="8" fill="#4A372B"/>
-      <path d="M3470 ${G - 300} L3450 ${G - 230} H3530 L3510 ${G - 300}Z" fill="#B4452A"/>
-      <rect x="3400" y="${G - 232}" width="180" height="150" rx="22" fill="#C65A2E"/>
-      <g id="drum"><circle cx="3490" cy="${G - 157}" r="56" fill="#2A1B12"/><circle cx="3490" cy="${G - 157}" r="44" fill="#3E2A1E"/>
-        <path d="M3490 ${G - 213} V${G - 101} M3434 ${G - 157} H3546 M3450 ${G - 197} L3530 ${G - 117} M3530 ${G - 197} L3450 ${G - 117}" stroke="#7A5638" stroke-width="7"/></g>
-      <rect x="3420" y="${G - 82}" width="16" height="82" fill="#2A1B12"/><rect x="3546" y="${G - 82}" width="16" height="82" fill="#2A1B12"/>
-      <ellipse cx="3672" cy="${G - 70}" rx="70" ry="22" fill="#2A1B12"/>
-      <g id="coolBeans">${Array.from({ length: 14 }, (_, i) => `<ellipse cx="${3618 + (i % 7) * 18}" cy="${G - 78 - Math.floor(i / 7) * 10}" rx="7" ry="5" fill="#8DA35E"/>`).join("")}</g>
       <rect x="3150" y="${G - 330}" width="110" height="140" rx="6" fill="#9FC6D6" stroke="#6B4A36" stroke-width="8"/></g>`;
 
-    /* -- 03 packing -- */
-    s += `<g><rect x="4080" y="${G - 190}" width="640" height="26" fill="#6B4A36"/><rect x="4100" y="${G - 164}" width="14" height="164" fill="#4A372B"/><rect x="4690" y="${G - 164}" width="14" height="164" fill="#4A372B"/>
-      <rect x="4090" y="${G - 210}" width="620" height="22" rx="11" fill="#2E2A2A"/>${Array.from({ length: 16 }, (_, i) => `<circle cx="${4104 + i * 39}" cy="${G - 199}" r="6" fill="#77706B"/>`).join("")}
-      <g id="bags">${Array.from({ length: 7 }, (_, i) => `<g transform="translate(${4040 + i * 120} 0)"><path d="M0 ${G - 212} v-96 q0 -10 10 -10 h56 q10 0 10 10 v96z" fill="#C8955A"/><rect x="0" y="${G - 330}" width="76" height="16" fill="#B07E46"/><rect x="12" y="${G - 290}" width="52" height="44" rx="4" fill="#3F5A38"/><text x="38" y="${G - 262}" text-anchor="middle" font-family="Fraunces" font-size="14" fill="#F3EBDD">PV</text></g>`).join("")}</g>
-      <rect x="4060" y="${G - 400}" width="40" height="400" fill="#E9D9C3"/><rect x="4700" y="${G - 400}" width="40" height="400" fill="#E9D9C3"/>
-      <g id="stamp"><rect x="4545" y="${G - 470}" width="20" height="110" fill="#2E2A2A"/><rect x="4520" y="${G - 360}" width="70" height="34" rx="6" fill="#B4452A"/></g>
-      <rect x="4500" y="${G - 480}" width="110" height="20" fill="#2E2A2A"/></g>`;
+    /* -- 03 packing: an open shed; the line, bags, bucket and box are drawn by roastery.js -- */
+    s += `<g><rect x="4020" y="470" width="660" height="${G - 470}" fill="#EFE3CF"/><rect x="4020" y="${G - 14}" width="660" height="14" fill="#E2D3BA"/>
+      <rect x="4000" y="452" width="700" height="26" rx="4" fill="#3A2A20"/><rect x="4040" y="478" width="22" height="${G - 478}" fill="#B9A890"/><rect x="4640" y="478" width="22" height="${G - 478}" fill="#B9A890"/>
+      <rect x="4250" y="490" width="200" height="44" rx="8" fill="#1E1410"/><text x="4350" y="521" text-anchor="middle" font-family="Fraunces" font-size="24" fill="#F3EBDD">Packing</text></g>`;
     [[4780, 0], [4850, 0], [4815, -56]].forEach(([x, dy]) => s += `<g><rect x="${x}" y="${G - 56 + dy}" width="64" height="56" rx="4" fill="#C8955A"/><rect x="${x + 27}" y="${G - 56 + dy}" width="10" height="56" fill="#E8D3AE"/></g>`);
+    s += `<g id="roastDyn"></g>`;
 
     /* -- 04 launch hill + sea -- */
     s += `<g><rect x="4990" y="${G - 400}" width="8" height="330" fill="#5A4436"/><path id="sock" d="M4998 ${G - 396} L5110 ${G - 380} L5106 ${G - 352} L4998 ${G - 344}Z" fill="#C65A2E"/><path d="M5030 ${G - 392} v42 M5062 ${G - 386} v36" stroke="#F3EBDD" stroke-width="10"/></g>`;
