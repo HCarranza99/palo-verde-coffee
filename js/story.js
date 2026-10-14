@@ -160,10 +160,10 @@ const tl = gsap.timeline({ paused: true, defaults: { ease: "none" }, onUpdate: (
 function chapterSwap(i, t) {
   const prev = chapters[i - 1], next = chapters[i];
   tl.to(prev.querySelectorAll(".w"), { yPercent: -110, duration: .8, stagger: .03, ease: "power2.in" }, t)
-    .to(prev.querySelectorAll(".eyebrow, p, .facts"), { opacity: 0, y: -16, duration: .6 }, t)
+    .to(prev.querySelectorAll(".eyebrow, .copy, .facts"), { opacity: 0, y: -16, duration: .6 }, t)
     .set(prev, { autoAlpha: 0 }, t + 1.2)
     .set(next, { autoAlpha: 1 }, t + 1)
-    .fromTo(next.querySelectorAll(".eyebrow, p, .facts"), { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 1, stagger: .2, ease: "power2.out" }, t + 1.2)
+    .fromTo(next.querySelectorAll(".eyebrow, .copy, .facts"), { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 1, stagger: .2, ease: "power2.out" }, t + 1.2)
     .to(chapterWords[i], { yPercent: 0, duration: 1, stagger: .05, ease: "power3.out" }, t + 1);
   // photo: previous wipes up, next reveals from below while de-blurring
   tl.to(shots[i - 1], { clipPath: "inset(0% 0% 100% 0% round 16px)", duration: 1, ease: "power2.inOut" }, t)
@@ -260,6 +260,25 @@ function hud() {
   $("#mapPlane").setAttribute("transform", `translate(${pt.x} ${pt.y}) rotate(${Math.atan2(pt2.y - pt.y, pt2.x - pt.x) * 57.3})`);
 }
 hud();
+
+/* ---------------- scene copy ----------------
+   Within a chapter the paragraph follows the scenes: whichever paragraph's
+   data-from the timeline has passed is shown, cross-fading when it changes. */
+const copies = chapters.map(c => [...c.querySelectorAll(".copy p")].map(p => ({ p, from: +p.dataset.from })));
+const shownCopy = copies.map(() => 0);
+function sceneCopy() {
+  const t = tl.time();
+  copies.forEach((list, ci) => {
+    let i = 0;
+    list.forEach((c, j) => { if (t > c.from + .001) i = j; });
+    if (i === shownCopy[ci]) return;
+    const out = list[shownCopy[ci]].p, inn = list[i].p, down = i > shownCopy[ci];
+    shownCopy[ci] = i;
+    gsap.to(out, { autoAlpha: 0, y: down ? -10 : 10, duration: .35, ease: "power1.in", overwrite: true });
+    gsap.fromTo(inn, { autoAlpha: 0, y: down ? 12 : -12 }, { autoAlpha: 1, y: 0, duration: .5, delay: .2, ease: "power2.out", overwrite: true });
+  });
+}
+tl.eventCallback("onUpdate", () => { hud(); sceneCopy(); });
 
 /* ---------------- one scene per scroll ----------------
    The journey is pinned and holds the page scroll. Each gesture (wheel, swipe,
