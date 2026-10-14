@@ -1,8 +1,9 @@
 /* ==========================================================================
-   STORY — preloader, smooth scroll, hero, and the pinned scrollytelling
-   timeline that drives the world camera, Tito's poses, copy and photos.
+   STORY — preloader, smooth scroll, hero, and the pinned journey: a timeline
+   that drives the world camera, Tito's poses, copy and photos, played one
+   scene per scroll gesture at a fixed pace.
    ========================================================================== */
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, Observer);
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 
 /* ---------------- smooth scroll ---------------- */
@@ -17,6 +18,7 @@ if (window.Lenis) {
 $$('a[href^="#"]').forEach(a => a.addEventListener("click", e => {
   const target = $(a.getAttribute("href")); if (!target) return;
   e.preventDefault();
+  if (typeof steps !== "undefined") steps.release();          // the journey may be holding the scroll
   lenis ? lenis.scrollTo(target, { duration: 1.6 }) : target.scrollIntoView({ behavior: "smooth" });
 }));
 
@@ -151,10 +153,7 @@ gsap.set("#bcherries circle", { scale: 0, transformOrigin: "50% 50%" });
 gsap.set(["#plane", "#planeFront"], { scale: 0, svgOrigin: "100 250" });
 journey.style.setProperty("--sky1", "#F3D9AE"); journey.style.setProperty("--sky2", "#F8ECD8"); journey.style.setProperty("--sun", "#FFE3A3");
 
-const tl = gsap.timeline({
-  defaults: { ease: "none" },
-  scrollTrigger: { trigger: "#journey", start: "top top", end: "+=1300%", scrub: 1, pin: true, anticipatePin: 1, onUpdate: hud }
-});
+const tl = gsap.timeline({ paused: true, defaults: { ease: "none" }, onUpdate: () => hud() });
 
 function chapterSwap(i, t) {
   const prev = chapters[i - 1], next = chapters[i];
@@ -251,8 +250,8 @@ const nodes = $$("#routeNodes li"), fill = $("#routeFill"), dot = $("#routeDot")
 const flightPath = $("#flightPath"), flen = flightPath.getTotalLength();
 flightPath.style.strokeDasharray = flen;
 const bounds = [0, 18, 45, 59, 83];
-function hud(self) {
-  const p = self.progress, t = tl.time();
+function hud() {
+  const p = tl.progress(), t = tl.time();
   fill.style.transform = `scaleX(${p})`; dot.style.left = p * 100 + "%";
   const idx = bounds.filter(b => t >= b + 1).length - 1;
   nodes.forEach((n, i) => n.classList.toggle("on", i <= Math.max(0, idx)));
@@ -264,7 +263,78 @@ function hud(self) {
   const pt = flightPath.getPointAtLength(flen * state.map), pt2 = flightPath.getPointAtLength(Math.min(flen, flen * state.map + 1));
   $("#mapPlane").setAttribute("transform", `translate(${pt.x} ${pt.y}) rotate(${Math.atan2(pt2.y - pt.y, pt2.x - pt.x) * 57.3})`);
 }
-hud({ progress: 0 });
+hud();
+
+/* ---------------- one scene per scroll ----------------
+   The journey is pinned and holds the page scroll. Each gesture (wheel, swipe,
+   arrow keys, space, page up/down) plays the next or previous scene at its own
+   fixed length, so the pace never depends on how hard someone scrolls. Gestures
+   during a scene are ignored (trackpad inertia would otherwise skip ahead). Past
+   the last scene the page scrolls on to the shop; before the first, back up. */
+const SCENES = [   // [timeline time where the scene ends, seconds it takes]
+  [10, 2.6],    // walk to the coffee
+  [17.5, 2.6],  // pick the ripe cherries
+  [23.5, 2],    // walk to the drying beds
+  [28.7, 3.2],  // tip the basket, spread the cherries
+  [35.5, 3.8],  // push the dry batch into the sack, shoulder it
+  [45, 3.2],    // to the roastery, roast
+  [53.5, 2.8],  // bag and stamp, pick up the box
+  [63.5, 2.8],  // up the hill, the paper plane
+  [80, 4.2],    // the flight
+  [86.5, 2.4],  // landing
+  [94.5, 2.6],  // to the door, drop the box
+  [tl.duration(), 2.6],
+];
+const steps = (() => {
+  const stops = [0, ...SCENES.map(s => s[0])];
+  let locked = false, busy = false, play = null;
+  const pin = ScrollTrigger.create({
+    trigger: "#journey", start: "top top", end: "+=100%", pin: true, anticipatePin: 1,
+    onEnter: () => { lock(); go(1); },         // the scroll that brings you here starts the first scene
+    onEnterBack: () => lock(),
+    onLeave: () => release(), onLeaveBack: () => release(),
+  });
+  const obs = Observer.create({
+    target: window, type: "wheel,touch", wheelSpeed: -1, tolerance: 10, preventDefault: true,
+    onUp: () => go(1), onDown: () => go(-1),
+  });
+  obs.disable();
+  function lock() {
+    if (locked) return;
+    locked = true; busy = false;
+    // hold the page one pixel inside the pin: exactly at its start would count as having left it
+    if (lenis) { lenis.stop(); lenis.scrollTo(pin.start + 1, { immediate: true, force: true }); } else window.scrollTo(0, pin.start + 1);
+    obs.enable();
+  }
+  function release() {
+    if (!locked) return;
+    locked = false; obs.disable();
+    lenis && lenis.start();
+  }
+  function go(dir) {
+    if (!locked || busy) return;
+    const t = tl.time();
+    const i = dir > 0 ? stops.findIndex(s => s > t + .01) : stops.findLastIndex(s => s < t - .01);
+    if (i < 0) {                                          // past either end: hand the scroll back
+      release();
+      const y = dir > 0 ? pin.end + 2 : pin.start - window.innerHeight * .7;
+      lenis ? lenis.scrollTo(y, { duration: 1.2 }) : window.scrollTo({ top: y, behavior: "smooth" });
+      return;
+    }
+    busy = true;
+    const scene = SCENES[dir > 0 ? i - 1 : i];             // the scene between the two stops
+    play && play.kill();
+    play = gsap.to(tl, { time: stops[i], duration: dir > 0 ? scene[1] : scene[1] * .6, ease: "sine.inOut",
+      onComplete: () => gsap.delayedCall(.2, () => { busy = false; }) });
+  }
+  window.addEventListener("keydown", e => {
+    if (!locked) return;
+    const next = ["ArrowDown", "PageDown", " ", "Spacebar"].includes(e.key), prev = ["ArrowUp", "PageUp"].includes(e.key);
+    if (!next && !prev) return;
+    e.preventDefault(); go(next ? 1 : -1);
+  });
+  return { release, go };
+})();
 
 /* ---------------- shop reveals ---------------- */
 $$(".js-reveal").forEach(el => gsap.from(el, { y: 50, opacity: 0, duration: 1.2, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 85%" } }));
